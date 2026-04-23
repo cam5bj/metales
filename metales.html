@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metales</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif}
+:root{
+  --metal-dark:#1a1f2e;
+  --metal-mid:#2d3447;
+  --metal-light:#3d4a6b;
+  --metal-accent:#8b9dc3;
+  --metal-gold:#c9a84c;
+  --metal-gold-light:#e8c96a;
+  --metal-silver:#d0d6e0;
+  --metal-surface:#f0f2f6;
+  --metal-card:#ffffff;
+  --metal-border:#c5cad8;
+  --metal-text:#1a1f2e;
+  --metal-text2:#5a6380;
+  --metal-danger:#b83232;
+  --metal-success:#2a7a4b;
+  --metal-warn:#c97a10;
+}
+body{background:var(--metal-surface);color:var(--metal-text);min-height:100vh;overflow-x:hidden}
+
+.login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,var(--metal-dark) 0%,var(--metal-mid) 60%,var(--metal-light) 100%);padding:2rem}
+.login-logo{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--metal-gold),var(--metal-gold-light));display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:700;color:var(--metal-dark);margin-bottom:1.5rem;box-shadow:0 4px 24px rgba(201,168,76,0.4)}
+.login-title{color:#fff;font-size:28px;font-weight:600;letter-spacing:2px;margin-bottom:4px}
+.login-sub{color:var(--metal-accent);font-size:13px;letter-spacing:1px;margin-bottom:2.5rem}
+.login-card{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);border-radius:16px;padding:2rem;width:100%;max-width:360px;backdrop-filter:blur(8px)}
+.login-card label{color:var(--metal-silver);font-size:13px;font-weight:500;display:block;margin-bottom:8px;letter-spacing:.5px}
+.login-card input{width:100%;padding:13px 16px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-size:18px;letter-spacing:4px;outline:none;transition:border .2s}
+.login-card input:focus{border-color:var(--metal-gold)}
+.login-card input::placeholder{color:rgba(255,255,255,0.3);letter-spacing:1px;font-size:14px}
+.login-user-preview{margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(201,168,76,0.13);border:1px solid rgba(201,168,76,0.25);color:var(--metal-gold-light);font-size:14px;font-weight:500;min-height:44px;display:flex;align-items:center;gap:8px}
+.login-btn{margin-top:1.5rem;width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,var(--metal-gold),var(--metal-gold-light));border:none;font-size:16px;font-weight:600;color:var(--metal-dark);cursor:pointer;letter-spacing:.5px;transition:opacity .2s}
+.login-btn:hover{opacity:.88}
+.login-btn:disabled{opacity:.4;cursor:not-allowed}
+.login-error{margin-top:12px;color:#f87171;font-size:13px;text-align:center}
+
+.app{display:none;flex-direction:column;min-height:100vh}
+.header{background:linear-gradient(90deg,var(--metal-dark),var(--metal-mid));padding:0 1.25rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.25)}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-logo{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--metal-gold),var(--metal-gold-light));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--metal-dark)}
+.header-title{color:#fff;font-size:18px;font-weight:600;letter-spacing:1.5px}
+.header-user{color:var(--metal-accent);font-size:12px;text-align:right}
+.header-user span{display:block;color:var(--metal-gold-light);font-weight:500;font-size:13px}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,0.15);color:var(--metal-silver);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-left:10px}
+.logout-btn:hover{background:rgba(255,255,255,0.08)}
+
+.tabs{background:var(--metal-mid);display:flex;border-bottom:2px solid var(--metal-gold)}
+.tab{flex:1;padding:13px 4px 11px;text-align:center;color:var(--metal-accent);font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.5px;transition:all .2s;border-bottom:3px solid transparent;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tab svg{width:18px;height:18px;opacity:.7}
+.tab.active{color:var(--metal-gold-light);border-bottom-color:var(--metal-gold)}
+.tab.active svg{opacity:1}
+.tab:hover{background:rgba(255,255,255,0.05)}
+
+.content{flex:1;padding:1rem;max-width:800px;margin:0 auto;width:100%}
+
+.card{background:var(--metal-card);border:1px solid var(--metal-border);border-radius:14px;padding:1.25rem;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.card-title{font-size:15px;font-weight:600;color:var(--metal-text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card-title svg{width:17px;height:17px;color:var(--metal-gold)}
+
+.date-hero{text-align:center;padding:1.5rem 1rem .5rem}
+.date-day-num{font-size:72px;font-weight:700;line-height:1;color:var(--metal-dark);font-variant-numeric:tabular-nums}
+.date-info{font-size:16px;color:var(--metal-text2);margin-top:4px;text-transform:capitalize}
+.date-dayname{font-size:24px;font-weight:600;color:var(--metal-gold);text-transform:capitalize}
+
+.task-item{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:10px;border:1px solid var(--metal-border);margin-bottom:8px;background:#fff;transition:box-shadow .2s}
+.task-item:hover{box-shadow:0 2px 10px rgba(0,0,0,0.09)}
+.task-dot{width:10px;height:10px;border-radius:50%;background:var(--metal-gold);margin-top:4px;flex-shrink:0}
+.task-dot.done{background:var(--metal-success)}
+.task-body{flex:1}
+.task-client{font-weight:600;font-size:14px;color:var(--metal-dark)}
+.task-details{font-size:12px;color:var(--metal-text2);margin-top:2px}
+.task-meta{font-size:11px;color:var(--metal-accent);margin-top:3px}
+.task-check{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--metal-border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;background:none}
+.task-check.done{background:var(--metal-success);border-color:var(--metal-success)}
+.task-check.done::after{content:'✓';color:#fff;font-size:13px}
+
+.fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--metal-gold),var(--metal-gold-light));border:none;font-size:28px;color:var(--metal-dark);cursor:pointer;box-shadow:0 4px 16px rgba(201,168,76,0.5);z-index:200;display:none;align-items:center;justify-content:center;font-weight:300;transition:transform .15s}
+.fab:hover{transform:scale(1.07)}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:300;align-items:flex-end;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:520px;max-height:92vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:600;color:var(--metal-dark);margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--metal-text2);line-height:1}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:500;color:var(--metal-text2);display:block;margin-bottom:5px;letter-spacing:.3px}
+.form-input{width:100%;padding:11px 13px;border:1.5px solid var(--metal-border);border-radius:9px;font-size:14px;color:var(--metal-text);outline:none;background:#fff;transition:border .2s}
+.form-input:focus{border-color:var(--metal-gold)}
+.form-select{width:100%;padding:11px 13px;border:1.5px solid var(--metal-border);border-radius:9px;font-size:14px;color:var(--metal-text);outline:none;background:#fff;transition:border .2s;appearance:none}
+.form-select:focus{border-color:var(--metal-gold)}
+.form-btn{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,var(--metal-gold),var(--metal-gold-light));border:none;font-size:15px;font-weight:600;color:var(--metal-dark);cursor:pointer;margin-top:6px;letter-spacing:.3px}
+.form-btn:hover{opacity:.9}
+.client-suggestions{border:1.5px solid var(--metal-border);border-radius:9px;background:#fff;margin-top:-10px;margin-bottom:14px;overflow:hidden;display:none}
+.client-sugg-item{padding:10px 13px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--metal-border)}
+.client-sugg-item:last-child{border-bottom:none}
+.client-sugg-item:hover{background:var(--metal-surface)}
+.client-sugg-name{font-weight:600;color:var(--metal-dark)}
+.client-sugg-detail{font-size:11px;color:var(--metal-text2);margin-top:1px}
+
+.sub-tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px}
+.sub-tab{padding:8px 16px;border-radius:20px;border:1.5px solid var(--metal-border);background:#fff;font-size:13px;font-weight:500;color:var(--metal-text2);cursor:pointer;white-space:nowrap;transition:all .2s}
+.sub-tab.active{background:var(--metal-dark);color:var(--metal-gold-light);border-color:var(--metal-dark)}
+
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--metal-text2);letter-spacing:.5px;border-bottom:1.5px solid var(--metal-border);background:var(--metal-surface)}
+.data-table td{padding:10px 12px;border-bottom:1px solid #eee;vertical-align:middle}
+.data-table tr:hover td{background:#fafbff}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-jefe{background:#e8eefd;color:#2d4a9e}
+.badge-admin{background:#e8f8ee;color:#1e6e3d}
+.badge-enc{background:#fdf3e2;color:#8a5510}
+
+.truck-card{background:#fff;border:1.5px solid var(--metal-border);border-radius:12px;padding:1rem;margin-bottom:10px;transition:box-shadow .2s}
+.truck-card:hover{box-shadow:0 3px 14px rgba(0,0,0,0.1)}
+.truck-card.alerta{border-color:var(--metal-danger);background:#fff8f8}
+.truck-plate{font-size:18px;font-weight:700;color:var(--metal-dark);letter-spacing:2px}
+.truck-model{font-size:13px;color:var(--metal-text2);margin-top:2px}
+.truck-meta{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
+.truck-meta-item{font-size:12px;color:var(--metal-text2);display:flex;align-items:center;gap:4px}
+.truck-meta-item strong{color:var(--metal-text);font-weight:600}
+.truck-meta-item.vence{color:var(--metal-danger);font-weight:500}
+.obs-log{margin-top:10px;border-top:1px solid #eee;padding-top:10px}
+.obs-entry{font-size:12px;padding:7px 10px;background:var(--metal-surface);border-radius:7px;margin-bottom:5px}
+.obs-entry-date{font-weight:600;color:var(--metal-gold);margin-right:5px}
+.add-obs-btn{font-size:12px;color:var(--metal-gold);background:none;border:1px dashed var(--metal-gold);padding:5px 12px;border-radius:8px;cursor:pointer;margin-top:6px}
+
+.asistencia-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.asist-header{font-size:10px;text-align:center;color:var(--metal-text2);font-weight:600;padding:4px 0}
+.asist-cell{height:36px;border-radius:7px;border:1.5px solid var(--metal-border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:#fff;color:var(--metal-text)}
+.asist-cell.present{background:var(--metal-success);border-color:var(--metal-success);color:#fff}
+.asist-cell.absent{background:#fce8e8;border-color:var(--metal-danger);color:var(--metal-danger)}
+.asist-cell.empty{background:transparent;border-color:transparent;cursor:default}
+.asist-cell.future{opacity:.4;cursor:not-allowed}
+
+.client-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--metal-border);border-radius:10px;background:#fff;margin-bottom:8px}
+.client-avatar{width:36px;height:36px;border-radius:50%;background:var(--metal-dark);display:flex;align-items:center;justify-content:center;color:var(--metal-gold-light);font-weight:700;font-size:14px;flex-shrink:0}
+.client-info{flex:1}
+.client-name{font-weight:600;font-size:14px;color:var(--metal-dark)}
+.client-detail{font-size:12px;color:var(--metal-text2);margin-top:2px}
+.client-link{color:var(--metal-gold);font-size:12px;text-decoration:none;margin-top:2px;display:inline-block}
+.empty-state{text-align:center;padding:2.5rem 1rem;color:var(--metal-text2)}
+.section-title{font-size:13px;font-weight:600;color:var(--metal-text2);letter-spacing:.5px;margin:14px 0 8px;text-transform:uppercase}
+.pill{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;margin:3px;background:var(--metal-surface);border:1px solid var(--metal-border);color:var(--metal-text)}
+.add-emp-btn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--metal-gold);background:none;border:1.5px dashed var(--metal-gold);padding:9px 16px;border-radius:9px;cursor:pointer;width:100%;justify-content:center;margin-top:8px}
+.emp-select{margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-logo">M</div>
+  <div class="login-title">METALES</div>
+  <div class="login-sub">SISTEMA DE GESTIÓN INTERNA</div>
+  <div class="login-card">
+    <label>Ingresá tu DNI</label>
+    <input type="number" id="dniInput" placeholder="Ej: 38530754" oninput="handleDni(this.value)">
+    <div class="login-user-preview" id="userPreview">
+      <span id="userPreviewText" style="color:rgba(255,255,255,0.35)">Ingresá tu DNI para continuar</span>
+    </div>
+    <button class="login-btn" id="loginBtn" disabled onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div class="app" id="appMain">
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">M</div>
+      <div class="header-title">METALES</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="header-user"><span id="headerName">-</span><span id="headerRole" style="font-size:11px">-</span></div>
+      <button class="logout-btn" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('inicio')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Inicio
+    </div>
+    <div class="tab" onclick="switchTab('clientes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Clientes
+    </div>
+    <div class="tab" onclick="switchTab('empleados')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      Empleados
+    </div>
+    <div class="tab" onclick="switchTab('camiones')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      Camiones
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="tab-inicio">
+      <div class="date-hero">
+        <div class="date-dayname" id="dayName">-</div>
+        <div class="date-day-num" id="dayNum">-</div>
+        <div class="date-info" id="dateInfo">-</div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="card-title" style="margin:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Tareas
+          </div>
+          <select id="filterFecha" class="form-select" style="width:auto;padding:7px 10px;font-size:12px" onchange="renderTareas()"></select>
+        </div>
+        <div id="taskList"></div>
+      </div>
+    </div>
+
+    <div id="tab-clientes" style="display:none">
+      <div class="card">
+        <div class="card-title">Clientes</div>
+        <div id="clientesList"></div>
+        <button class="add-emp-btn" onclick="openModal('clienteModal')">+ Agregar cliente</button>
+      </div>
+    </div>
+
+    <div id="tab-empleados" style="display:none">
+      <div class="sub-tabs">
+        <div class="sub-tab active" onclick="switchSubTab('nomina')">Nómina</div>
+        <div class="sub-tab" onclick="switchSubTab('grupo')">Grupos</div>
+        <div class="sub-tab" onclick="switchSubTab('asistencia')">Asistencia</div>
+      </div>
+      <div id="subtab-nomina"></div>
+      <div id="subtab-grupo" style="display:none"></div>
+      <div id="subtab-asistencia" style="display:none"></div>
+    </div>
+
+    <div id="tab-camiones" style="display:none">
+      <div id="camionesList"></div>
+      <button class="add-emp-btn" onclick="openModal('camionModal')">+ Agregar camión</button>
+    </div>
+  </div>
+</div>
+
+<button class="fab" id="fabBtn" onclick="openModal('tareaModal')">+</button>
+
+<!-- MODAL TAREA -->
+<div class="modal-bg" id="tareaModal">
+<div class="modal">
+  <div class="modal-title">Nueva Tarea <button class="modal-close" onclick="closeModal('tareaModal')">×</button></div>
+  <div class="form-group">
+    <label class="form-label">Cliente</label>
+    <input class="form-input" id="tareaCliente" placeholder="Escribí 3+ letras..." oninput="buscarCliente(this.value)" autocomplete="off">
+    <div class="client-suggestions" id="clientSuggestions"></div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Teléfono</label>
+    <input class="form-input" id="tareaTel" placeholder="Teléfono del cliente" readonly>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Dirección</label>
+    <input class="form-input" id="tareaDir" placeholder="Dirección" readonly>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Fecha de la tarea</label>
+    <input class="form-input" id="tareaFecha" type="date">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Horario</label>
+    <input class="form-input" id="tareaHorario" type="time">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Vehículo</label>
+    <select class="form-select" id="tareaVehiculo"><option value="">— Sin vehículo —</option></select>
+  </div>
+  <div class="form-group">
+    <label class="form-label">¿Con sobre?</label>
+    <select class="form-select" id="tareaSobre" onchange="toggleMonto()">
+      <option value="no">Sin sobre</option>
+      <option value="si">Con sobre</option>
+    </select>
+  </div>
+  <div class="form-group" id="montoGroup" style="display:none">
+    <label class="form-label">Monto del sobre ($)</label>
+    <input class="form-input" id="tareaMonto" type="number" placeholder="0.00">
+  </div>
+  <button class="form-btn" onclick="guardarTarea()">Guardar tarea</button>
+</div>
+</div>
+
+<!-- MODAL CLIENTE -->
+<div class="modal-bg" id="clienteModal">
+<div class="modal">
+  <div class="modal-title">Nuevo Cliente <button class="modal-close" onclick="closeModal('clienteModal')">×</button></div>
+  <div class="form-group"><label class="form-label">Nombre y Apellido</label><input class="form-input" id="cliNombre" placeholder="Juan García"></div>
+  <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="cliTel" type="tel" placeholder="11-1234-5678"></div>
+  <div class="form-group"><label class="form-label">Dirección</label><input class="form-input" id="cliDir" placeholder="Av. Rivadavia 1234, CABA"></div>
+  <div class="form-group"><label class="form-label">Link Google Maps</label><input class="form-input" id="cliMaps" placeholder="https://maps.google.com/..."></div>
+  <button class="form-btn" onclick="guardarCliente()">Guardar cliente</button>
+</div>
+</div>
+
+<!-- MODAL CAMION -->
+<div class="modal-bg" id="camionModal">
+<div class="modal">
+  <div class="modal-title">Nuevo Camión <button class="modal-close" onclick="closeModal('camionModal')">×</button></div>
+  <div class="form-group"><label class="form-label">Patente</label><input class="form-input" id="camPatente" placeholder="AB123CD" style="text-transform:uppercase"></div>
+  <div class="form-group"><label class="form-label">Modelo</label><input class="form-input" id="camModelo" placeholder="Ford F-350 2020"></div>
+  <div class="form-group"><label class="form-label">Vencimiento VTV</label><input class="form-input" id="camVTV" type="date"></div>
+  <div class="form-group"><label class="form-label">Vencimiento Patente</label><input class="form-input" id="camPatVenc" type="date"></div>
+  <div class="form-group">
+    <label class="form-label">Estado inicial</label>
+    <select class="form-select" id="camEstado" onchange="toggleObsInicial()">
+      <option value="ok">En condiciones</option>
+      <option value="obs">Con observaciones</option>
+    </select>
+  </div>
+  <div id="obsInicialGroup" style="display:none" class="form-group">
+    <label class="form-label">Observación inicial</label>
+    <textarea class="form-input" id="camObsInicial" rows="2" placeholder="Describí el problema..."></textarea>
+  </div>
+  <button class="form-btn" onclick="guardarCamion()">Guardar camión</button>
+</div>
+</div>
+
+<!-- MODAL OBS -->
+<div class="modal-bg" id="obsModal">
+<div class="modal">
+  <div class="modal-title">Agregar Observación <button class="modal-close" onclick="closeModal('obsModal')">×</button></div>
+  <div class="form-group"><label class="form-label">Observación</label><textarea class="form-input" id="newObsText" rows="3" placeholder="Describí el problema..."></textarea></div>
+  <button class="form-btn" onclick="guardarObs()">Guardar observación</button>
+</div>
+</div>
+
+<script>
+const USERS=[
+  {dni:'40715376',nombre:'Camila Barraza',rol:'Jefe'},
+  {dni:'38530754',nombre:'Julian Barraza',rol:'Jefe'},
+  {dni:'37760794',nombre:'Nicolas Barraza',rol:'Jefe'},
+  {dni:'15069827',nombre:'Jaqueline Bernardoni',rol:'Jefe'},
+  {dni:'41137174',nombre:'Rocio Alvarez',rol:'Administrativa'},
+  {dni:'38634595',nombre:'Joaquin Romero',rol:'Encargado'},
+  {dni:'38843842',nombre:'Leandro Ortega',rol:'Encargado'},
+  {dni:'38536954',nombre:'Lucas Gimenez',rol:'Encargado'},
+];
+const ASISTENCIA_PERMS=['40715376','38530754','37760794','15069827'];
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+let currentUser=null;
+let currentTruckId=null;
+let currentSubTab='nomina';
+
+function loadState(){
+  try{return JSON.parse(localStorage.getItem('metales_state'))||defaultState();}catch(e){return defaultState();}
+}
+function defaultState(){
+  return {tareas:[],clientes:[],camiones:[],asistencia:{},nextId:100};
+}
+function saveState(){localStorage.setItem('metales_state',JSON.stringify(state));}
+let state=loadState();
+
+function handleDni(v){
+  const user=USERS.find(u=>u.dni===v.trim());
+  const prevText=document.getElementById('userPreviewText');
+  const btn=document.getElementById('loginBtn');
+  document.getElementById('loginError').textContent='';
+  if(v.length>=8){
+    if(user){prevText.textContent=user.nombre+' — '+user.rol;prevText.style.color='';btn.disabled=false;}
+    else{prevText.textContent='DNI no registrado en el sistema';prevText.style.color='#f87171';btn.disabled=true;}
+  } else {
+    prevText.textContent='Ingresá tu DNI para continuar';prevText.style.color='rgba(255,255,255,0.35)';btn.disabled=true;
+  }
+}
+
+function doLogin(){
+  const v=document.getElementById('dniInput').value.trim();
+  const user=USERS.find(u=>u.dni===v);
+  if(!user){document.getElementById('loginError').textContent='DNI no encontrado.';return;}
+  currentUser=user;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appMain').style.display='flex';
+  document.getElementById('fabBtn').style.display='flex';
+  document.getElementById('headerName').textContent=user.nombre;
+  document.getElementById('headerRole').textContent=user.rol;
+  initDate();populateFechaFilter();renderTareas();renderClientes();renderNomina();renderCamiones();
+}
+
+function doLogout(){
+  currentUser=null;
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('appMain').style.display='none';
+  document.getElementById('fabBtn').style.display='none';
+  document.getElementById('dniInput').value='';
+  document.getElementById('userPreviewText').textContent='Ingresá tu DNI para continuar';
+  document.getElementById('userPreviewText').style.color='rgba(255,255,255,0.35)';
+  document.getElementById('loginBtn').disabled=true;
+}
+
+function initDate(){
+  const now=new Date();
+  document.getElementById('dayName').textContent=DIAS[now.getDay()];
+  document.getElementById('dayNum').textContent=now.getDate();
+  document.getElementById('dateInfo').textContent=MESES[now.getMonth()]+' de '+now.getFullYear();
+}
+
+function todayStr(){
+  const n=new Date();
+  return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+}
+
+function populateFechaFilter(){
+  const sel=document.getElementById('filterFecha');
+  sel.innerHTML='';
+  const now=new Date();
+  for(let i=0;i<7;i++){
+    const d=new Date(now);d.setDate(now.getDate()+i);
+    const val=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const label=i===0?'Hoy':(i===1?'Mañana':DIAS[d.getDay()]+' '+d.getDate());
+    const opt=document.createElement('option');opt.value=val;opt.textContent=label;sel.appendChild(opt);
+  }
+  document.getElementById('tareaFecha').value=todayStr();
+}
+
+function renderTareas(){
+  const fecha=document.getElementById('filterFecha').value;
+  const list=document.getElementById('taskList');
+  const filtered=state.tareas.filter(t=>t.fecha===fecha);
+  if(!filtered.length){list.innerHTML='<div class="empty-state"><p style="font-size:14px">Sin tareas para este día</p></div>';return;}
+  list.innerHTML=filtered.map(t=>`
+    <div class="task-item">
+      <div class="task-dot ${t.done?'done':''}"></div>
+      <div class="task-body">
+        <div class="task-client">${t.cliente}</div>
+        <div class="task-details">${t.horario?t.horario+' · ':''}${t.vehiculo?t.vehiculo+' · ':''}${t.sobre==='si'?'Con sobre ($'+Number(t.monto||0).toLocaleString('es-AR')+')':'Sin sobre'}</div>
+        <div class="task-meta">Por ${t.creadoPor}</div>
+      </div>
+      <div class="task-check ${t.done?'done':''}" onclick="toggleTarea(${t.id})"></div>
+    </div>`).join('');
+}
+
+function toggleTarea(id){
+  const t=state.tareas.find(x=>x.id===id);
+  if(t){t.done=!t.done;saveState();renderTareas();}
+}
+
+function buscarCliente(q){
+  const box=document.getElementById('clientSuggestions');
+  if(q.length<3){box.style.display='none';return;}
+  const res=state.clientes.filter(c=>c.nombre.toLowerCase().includes(q.toLowerCase()));
+  if(!res.length){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML=res.map(c=>`<div class="client-sugg-item" onclick="selectCliente(${c.id})"><div class="client-sugg-name">${c.nombre}</div><div class="client-sugg-detail">${c.tel} · ${c.dir}</div></div>`).join('');
+}
+
+function selectCliente(id){
+  const c=state.clientes.find(x=>x.id===id);
+  if(!c)return;
+  document.getElementById('tareaCliente').value=c.nombre;
+  document.getElementById('tareaTel').value=c.tel;
+  document.getElementById('tareaDir').value=c.dir;
+  document.getElementById('clientSuggestions').style.display='none';
+}
+
+function toggleMonto(){document.getElementById('montoGroup').style.display=document.getElementById('tareaSobre').value==='si'?'block':'none';}
+function toggleObsInicial(){document.getElementById('obsInicialGroup').style.display=document.getElementById('camEstado').value==='obs'?'block':'none';}
+
+function guardarTarea(){
+  const cliente=document.getElementById('tareaCliente').value.trim();
+  const fecha=document.getElementById('tareaFecha').value;
+  if(!cliente){alert('Ingresá el nombre del cliente.');return;}
+  if(!fecha){alert('Seleccioná una fecha.');return;}
+  state.tareas.push({
+    id:state.nextId++,
+    cliente,
+    horario:document.getElementById('tareaHorario').value,
+    vehiculo:document.getElementById('tareaVehiculo').value,
+    sobre:document.getElementById('tareaSobre').value,
+    monto:document.getElementById('tareaMonto').value,
+    fecha,
+    creadoPor:currentUser.nombre,
+    done:false
+  });
+  saveState();
+  closeModal('tareaModal');
+  ['tareaCliente','tareaTel','tareaDir','tareaHorario','tareaMonto'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tareaVehiculo').value='';
+  document.getElementById('tareaSobre').value='no';
+  document.getElementById('montoGroup').style.display='none';
+  if(document.getElementById('filterFecha').value===fecha)renderTareas();
+}
+
+function renderClientes(){
+  const list=document.getElementById('clientesList');
+  if(!state.clientes.length){list.innerHTML='<div class="empty-state"><p>Sin clientes cargados.</p></div>';return;}
+  list.innerHTML=state.clientes.map(c=>{
+    const initials=c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    return `<div class="client-row">
+      <div class="client-avatar">${initials}</div>
+      <div class="client-info">
+        <div class="client-name">${c.nombre}</div>
+        <div class="client-detail">${c.tel}${c.dir?' · '+c.dir:''}</div>
+        ${c.maps?`<a href="${c.maps}" class="client-link" target="_blank">Ver en Maps</a>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function guardarCliente(){
+  const nombre=document.getElementById('cliNombre').value.trim();
+  if(!nombre){alert('Ingresá el nombre del cliente.');return;}
+  state.clientes.push({id:state.nextId++,nombre,tel:document.getElementById('cliTel').value.trim(),dir:document.getElementById('cliDir').value.trim(),maps:document.getElementById('cliMaps').value.trim()});
+  saveState();closeModal('clienteModal');
+  ['cliNombre','cliTel','cliDir','cliMaps'].forEach(id=>document.getElementById(id).value='');
+  renderClientes();populateTruckSelect();
+}
+
+function renderNomina(){
+  const badgeClass={Jefe:'badge-jefe',Administrativa:'badge-admin',Encargado:'badge-enc'};
+  document.getElementById('subtab-nomina').innerHTML=`<div class="card" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Nombre</th><th>DNI</th><th>Rol</th></tr></thead><tbody>${
+    USERS.map(u=>`<tr><td style="font-weight:500">${u.nombre}</td><td style="font-family:monospace">${u.dni}</td><td><span class="badge ${badgeClass[u.rol]||''}">${u.rol}</span></td></tr>`).join('')
+  }</tbody></table></div>`;
+}
+
+function renderGrupos(){
+  const grupos={Operario:[],Encargado:USERS.filter(u=>u.rol==='Encargado').map(u=>u.nombre),Prensa:[],Choferes:[]};
+  document.getElementById('subtab-grupo').innerHTML=`<div class="card">${
+    Object.entries(grupos).map(([g,m])=>`<div class="section-title">${g}</div><div style="margin-bottom:8px">${m.length?m.map(x=>`<span class="pill">${x}</span>`).join(''):'<span style="font-size:13px;color:var(--metal-text2)">Sin miembros</span>'}</div>`).join('')
+  }</div>`;
+}
+
+function renderAsistencia(){
+  const pane=document.getElementById('subtab-asistencia');
+  const canEdit=ASISTENCIA_PERMS.includes(currentUser.dni);
+  const now=new Date();const year=now.getFullYear();const month=now.getMonth();
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const today=now.getDate();
+  let empDni=state._asistEmp||USERS[0].dni;
+  let html=`<div class="card"><div class="card-title">Asistencia — ${MESES[month]} ${year}</div>`;
+  if(!canEdit)html+=`<div style="font-size:12px;color:var(--metal-warn);margin-bottom:10px;padding:8px 12px;background:#fdf8e2;border-radius:8px">Solo los jefes pueden registrar asistencia.</div>`;
+  html+=`<div class="emp-select"><select class="form-select" id="asistEmp" onchange="changeAsistEmp(this.value)">`;
+  USERS.forEach(u=>{html+=`<option value="${u.dni}" ${u.dni===empDni?'selected':''}>${u.nombre}</option>`;});
+  html+=`</select></div><div class="asistencia-grid">`;
+  ['D','L','M','X','J','V','S'].forEach(d=>{html+=`<div class="asist-header">${d}</div>`;});
+  for(let i=0;i<firstDay;i++)html+=`<div class="asist-cell empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const key=`${year}-${month}-${empDni}-${d}`;
+    const st=state.asistencia[key];
+    const isFuture=d>today;
+    let cls='asist-cell';
+    if(isFuture)cls+=' future';
+    else if(st==='P')cls+=' present';
+    else if(st==='A')cls+=' absent';
+    const click=canEdit&&!isFuture?`onclick="toggleAsist('${key}')"`:'';
+    html+=`<div class="${cls}" ${click}>${d}</div>`;
+  }
+  html+=`</div><div style="display:flex;gap:12px;margin-top:14px;font-size:12px">`;
+  html+=`<span><span style="display:inline-block;width:12px;height:12px;background:var(--metal-success);border-radius:3px;margin-right:4px;vertical-align:middle"></span>Presente</span>`;
+  html+=`<span><span style="display:inline-block;width:12px;height:12px;background:#fce8e8;border:1.5px solid var(--metal-danger);border-radius:3px;margin-right:4px;vertical-align:middle"></span>Ausente</span>`;
+  html+=`</div></div>`;
+  pane.innerHTML=html;
+}
+
+function changeAsistEmp(v){state._asistEmp=v;renderAsistencia();}
+
+function toggleAsist(key){
+  const cur=state.asistencia[key];
+  if(!cur)state.asistencia[key]='P';
+  else if(cur==='P')state.asistencia[key]='A';
+  else delete state.asistencia[key];
+  saveState();renderAsistencia();
+}
+
+function isAlertDate(s){
+  if(!s)return false;
+  const d=new Date(s);const now=new Date();
+  return (d-now)/(1000*60*60*24)<=31;
+}
+function formatDate(s){if(!s)return '-';const[y,m,d]=s.split('-');return `${d}/${m}/${y}`;}
+
+function renderCamiones(){
+  populateTruckSelect();
+  const list=document.getElementById('camionesList');
+  if(!state.camiones.length){list.innerHTML='<div class="empty-state"><p>Sin camiones cargados.</p></div>';return;}
+  list.innerHTML=state.camiones.map(c=>{
+    const alerta=isAlertDate(c.vtv)||isAlertDate(c.patVenc);
+    const vtvCls=isAlertDate(c.vtv)?'truck-meta-item vence':'truck-meta-item';
+    const patCls=isAlertDate(c.patVenc)?'truck-meta-item vence':'truck-meta-item';
+    const obs=c.observaciones.map(o=>`<div class="obs-entry"><span class="obs-entry-date">${o.fecha}</span><strong>${o.usuario}:</strong> ${o.texto}</div>`).join('');
+    return `<div class="truck-card ${alerta?'alerta':''}">
+      ${alerta?`<div style="font-size:11px;color:var(--metal-danger);font-weight:600;margin-bottom:6px">⚠ Vencimiento próximo</div>`:''}
+      <div class="truck-plate">${c.patente}</div>
+      <div class="truck-model">${c.modelo}</div>
+      <div class="truck-meta">
+        <div class="${vtvCls}"><strong>VTV:</strong> ${formatDate(c.vtv)}</div>
+        <div class="${patCls}"><strong>Pat:</strong> ${formatDate(c.patVenc)}</div>
+        <div class="truck-meta-item"><strong>Estado:</strong> ${c.estado==='ok'?'En condiciones':'Con observaciones'}</div>
+      </div>
+      ${c.observaciones.length?`<div class="obs-log">${obs}</div>`:''}
+      <button class="add-obs-btn" onclick="openObsModal(${c.id})">+ Agregar observación</button>
+    </div>`;
+  }).join('');
+}
+
+function openObsModal(id){currentTruckId=id;document.getElementById('newObsText').value='';openModal('obsModal');}
+
+function guardarObs(){
+  const texto=document.getElementById('newObsText').value.trim();
+  if(!texto){alert('Escribí una observación.');return;}
+  const camion=state.camiones.find(c=>c.id===currentTruckId);
+  if(!camion)return;
+  const now=new Date();
+  const fecha=`${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  camion.observaciones.push({fecha,texto,usuario:currentUser.nombre});
+  if(camion.estado==='ok')camion.estado='obs';
+  saveState();closeModal('obsModal');renderCamiones();
+}
+
+function guardarCamion(){
+  const patente=document.getElementById('camPatente').value.trim().toUpperCase();
+  const modelo=document.getElementById('camModelo').value.trim();
+  if(!patente||!modelo){alert('Ingresá patente y modelo.');return;}
+  const obs=[];
+  if(document.getElementById('camEstado').value==='obs'){
+    const t=document.getElementById('camObsInicial').value.trim();
+    if(t){const now=new Date();obs.push({fecha:`${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`,texto:t,usuario:currentUser.nombre});}
+  }
+  state.camiones.push({id:state.nextId++,patente,modelo,vtv:document.getElementById('camVTV').value,patVenc:document.getElementById('camPatVenc').value,estado:document.getElementById('camEstado').value,observaciones:obs});
+  saveState();closeModal('camionModal');
+  ['camPatente','camModelo','camVTV','camPatVenc','camObsInicial'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('camEstado').value='ok';document.getElementById('obsInicialGroup').style.display='none';
+  renderCamiones();
+}
+
+function populateTruckSelect(){
+  const sel=document.getElementById('tareaVehiculo');if(!sel)return;
+  const cur=sel.value;sel.innerHTML='<option value="">— Sin vehículo —</option>';
+  state.camiones.forEach(c=>{const o=document.createElement('option');o.value=c.patente;o.textContent=c.patente+' — '+c.modelo;sel.appendChild(o);});
+  sel.value=cur;
+}
+
+function switchTab(tab){
+  ['inicio','clientes','empleados','camiones'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'block':'none';});
+  document.querySelectorAll('.tab').forEach((el,i)=>{el.classList.toggle('active',['inicio','clientes','empleados','camiones'][i]===tab);});
+  document.getElementById('fabBtn').style.display=tab==='inicio'?'flex':'none';
+  if(tab==='empleados')renderSubTab(currentSubTab);
+  if(tab==='camiones')renderCamiones();
+  if(tab==='clientes')renderClientes();
+}
+
+function switchSubTab(sub){
+  currentSubTab=sub;
+  ['nomina','grupo','asistencia'].forEach(s=>{document.getElementById('subtab-'+s).style.display=s===sub?'block':'none';});
+  document.querySelectorAll('.sub-tab').forEach((el,i)=>{el.classList.toggle('active',['nomina','grupo','asistencia'][i]===sub);});
+  renderSubTab(sub);
+}
+
+function renderSubTab(sub){
+  if(sub==='nomina')renderNomina();
+  if(sub==='grupo')renderGrupos();
+  if(sub==='asistencia')renderAsistencia();
+}
+
+function openModal(id){
+  if(id==='tareaModal'){document.getElementById('tareaFecha').value=document.getElementById('filterFecha').value||todayStr();populateTruckSelect();}
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-bg').forEach(bg=>{bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');});});
+document.getElementById('dniInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+populateFechaFilter();
+</script>
+</body>
+</html>
