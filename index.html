@@ -257,10 +257,10 @@ body{background:var(--surface);color:var(--text);min-height:100vh;overflow-x:hid
   <div class="form-group">
     <label class="form-label">Horario</label>
     <select class="form-select" id="tareaHorarioTipo" onchange="toggleHorarioInput()">
-      <option value="hora">Hora específica</option>
       <option value="inmediato">⚡ Inmediatamente</option>
+      <option value="hora">Hora específica</option>
     </select>
-    <input class="form-input" id="tareaHorario" type="time" style="margin-top:8px">
+    <input class="form-input" id="tareaHorario" type="time" style="margin-top:8px;display:none">
   </div>
   <div class="form-group">
     <label class="form-label">Vehículo</label>
@@ -382,11 +382,34 @@ function formatDateEs(str) {
 
 // ── INIT ──────────────────────────────────────────────────
 window.addEventListener('load', () => {
+  document.getElementById('dniInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  // Auto-login si hay sesión guardada
+  const dniGuardado = localStorage.getItem('metalback_dni');
+  if(dniGuardado) {
+    const user = USERS.find(u => u.dni === dniGuardado);
+    if(user) {
+      setTimeout(() => {
+        document.getElementById('loadingScreen').style.display = 'none';
+        currentUser = user;
+        document.getElementById('appMain').style.display = 'flex';
+        document.getElementById('fabBtn').style.display = 'flex';
+        document.getElementById('headerName').textContent = user.nombre;
+        document.getElementById('headerRole').textContent = user.rol;
+        selectedDate = todayStr();
+        updateDateHero();
+        buildDateSelector();
+        loadClientes();
+        loadVehiculos();
+        subscribeToTareas();
+        mostrarBotonNotif();
+      }, 800);
+      return;
+    }
+  }
   setTimeout(() => {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
   }, 1000);
-  document.getElementById('dniInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 });
 
 // ── LOGIN ─────────────────────────────────────────────────
@@ -406,6 +429,7 @@ window.doLogin = function() {
   const user = USERS.find(u => u.dni === v);
   if(!user) { document.getElementById('loginError').textContent='DNI no encontrado.'; return; }
   currentUser = user;
+  localStorage.setItem('metalback_dni', user.dni);
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appMain').style.display = 'flex';
   document.getElementById('fabBtn').style.display = 'flex';
@@ -423,6 +447,7 @@ window.doLogin = function() {
 window.doLogout = function() {
   if(unsubTareas) unsubTareas();
   currentUser = null;
+  localStorage.removeItem('metalback_dni');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('appMain').style.display = 'none';
   document.getElementById('fabBtn').style.display = 'none';
@@ -559,7 +584,7 @@ function renderTaskItem(t) {
   const esRealizado = estado === 'realizado';
   const itemClass = esVisto ? 'task-item visto' : esRealizado ? 'task-item realizado' : 'task-item';
 
-  const sobre = t.sobre==='si' ? `💵 Con sobre ($${Number(t.monto||0).toLocaleString('es-AR')})` : 'Sin sobre';
+  const sobre = t.sobre==='si' ? `Con sobre (${Number(t.monto||0).toLocaleString('es-AR')})` : 'Sin sobre';
   const vehiculo = t.vehiculo ? `🚛 ${t.vehiculo}` : '';
   const hora = t.horario === 'inmediato' ? '⚡' : (t.horario || '--:--');
 
