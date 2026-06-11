@@ -217,6 +217,8 @@ body{background:var(--surface);color:var(--text);min-height:100vh;overflow-x:hid
     </div>
   </div>
 
+  <div id="notifBanner" style="display:none;background:#c0392b;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;text-align:center;cursor:pointer" onclick="cerrarBanner()"></div>
+
   <div class="content">
     <!-- TAB TAREAS -->
     <div id="tab-tareas">
@@ -254,7 +256,11 @@ body{background:var(--surface);color:var(--text);min-height:100vh;overflow-x:hid
   </div>
   <div class="form-group">
     <label class="form-label">Horario</label>
-    <input class="form-input" id="tareaHorario" type="time">
+    <select class="form-select" id="tareaHorarioTipo" onchange="toggleHorarioInput()">
+      <option value="hora">Hora específica</option>
+      <option value="inmediato">⚡ Inmediatamente</option>
+    </select>
+    <input class="form-input" id="tareaHorario" type="time" style="margin-top:8px">
   </div>
   <div class="form-group">
     <label class="form-label">Vehículo</label>
@@ -411,6 +417,7 @@ window.doLogin = function() {
   loadClientes();
   loadVehiculos();
   subscribeToTareas();
+  mostrarBotonNotif();
 };
 
 window.doLogout = function() {
@@ -465,13 +472,52 @@ window.selectDate = function(val) {
 };
 
 // ── TAREAS ────────────────────────────────────────────────
+let tareasAnteriores = null;
+
 function subscribeToTareas() {
   const q = query(collection(db,'tareas'), orderBy('fecha'), orderBy('horario'));
   unsubTareas = onSnapshot(q, snap => {
-    tareas = snap.docs.map(d => ({id:d.id,...d.data()}));
+    const nuevasTareas = snap.docs.map(d => ({id:d.id,...d.data()}));
+
+    // Detectar tareas nuevas de hoy cargadas por OTROS usuarios
+    if(tareasAnteriores !== null) {
+      const idsAnteriores = new Set(tareasAnteriores.map(t => t.id));
+      snap.docChanges().forEach(change => {
+        if(change.type === 'added') {
+          const t = {id: change.doc.id, ...change.doc.data()};
+          if(t.creadoPor !== currentUser.nombre && t.fecha === todayStr()) {
+            enviarNotificacion(t);
+          }
+        }
+      });
+    }
+
+    tareasAnteriores = nuevasTareas;
+    tareas = nuevasTareas;
     renderTareas();
+    mostrarBanner();
   });
 }
+
+function mostrarBanner() {
+  if(Notification.permission !== 'granted') return; // no pisar el banner de activar notif
+  const hoy = todayStr();
+  const pendientesHoy = tareas.filter(t => t.fecha === hoy && t.estado === 'pendiente');
+  const banner = document.getElementById('notifBanner');
+  if(pendientesHoy.length > 0) {
+    banner.style.display = 'block';
+    banner.style.background = '#c0392b';
+    banner.onclick = cerrarBanner;
+    banner.textContent = `🔴 ${pendientesHoy.length} tarea${pendientesHoy.length>1?'s':''} pendiente${pendientesHoy.length>1?'s':''} para hoy — tocá para ver`;
+  } else {
+    if(banner.style.background === 'rgb(192, 57, 43)') banner.style.display = 'none';
+  }
+}
+
+window.cerrarBanner = function() {
+  switchTab('tareas');
+  selectDate(todayStr());
+};
 
 function renderTareas() {
   const container = document.getElementById('taskContainer');
@@ -515,7 +561,7 @@ function renderTaskItem(t) {
 
   const sobre = t.sobre==='si' ? `💵 Con sobre ($${Number(t.monto||0).toLocaleString('es-AR')})` : 'Sin sobre';
   const vehiculo = t.vehiculo ? `🚛 ${t.vehiculo}` : '';
-  const hora = t.horario || '--:--';
+  const hora = t.horario === 'inmediato' ? '⚡' : (t.horario || '--:--');
 
   let metaLines = [`<span class="task-meta-badge">✍️ ${t.creadoPor}</span>`];
   if(t.vistoBy) metaLines.push(`<span class="task-meta-badge">👁 ${t.vistoBy}</span>`);
@@ -568,21 +614,101 @@ window.selectCliente = function(id) {
   document.getElementById('clientSuggestions').style.display = 'none';
 };
 
+window.toggleHorarioInput = function() {
+  const tipo = document.getElementById('tareaHorarioTipo').value;
+  document.getElementById('tareaHorario').style.display = tipo === 'inmediato' ? 'none' : 'block';
+};
+
 window.toggleMonto = function() {
   document.getElementById('montoGroup').style.display = document.getElementById('tareaSobre').value==='si'?'block':'none';
 };
+
+// ── NOTIFICACIONES ────────────────────────────────────────
+const VAPID_KEY = 'BHk2ONXWze7NyXqVibC9M3ZvnjETfqWVDGMcyN4Mpx62QmNRoOY6FDQOjes5Xj1gisGmhvE3WeLGT8Dq1EoGO30';
+let swRegistration = null;
+
+function mostrarBotonNotif() {
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'granted') {
+    registrarNotificaciones();
+    return;
+  }
+  if(Notification.permission === 'denied') return;
+  // Mostrar banner para activar notificaciones
+  const banner = document.getElementById('notifBanner');
+  banner.style.display = 'block';
+  banner.style.background = '#1a1f2e';
+  banner.innerHTML = '🔔 Tocá aquí para activar las notificaciones de nuevas tareas';
+  banner.onclick = activarNotificaciones;
+}
+
+window.activarNotificaciones = async function() {
+  try {
+    const permission = await Notification.requestPermission();
+    if(permission === 'granted') {
+      await registrarNotificaciones();
+      const banner = document.getElementById('notifBanner');
+      banner.style.background = '#27ae60';
+      banner.innerHTML = '✅ Notificaciones activadas';
+      banner.onclick = null;
+      setTimeout(() => { banner.style.display = 'none'; mostrarBanner(); }, 2000);
+    } else {
+      document.getElementById('notifBanner').style.display = 'none';
+    }
+  } catch(e) { console.log('Error activando notificaciones:', e); }
+};
+
+async function registrarNotificaciones() {
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    swRegistration = await navigator.serviceWorker.register('/sw.js');
+    const sub = await swRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_KEY)
+    });
+    await setDoc(doc(db, 'suscripciones', currentUser.dni), {
+      usuario: currentUser.nombre,
+      suscripcion: JSON.stringify(sub),
+      updatedAt: serverTimestamp()
+    });
+  } catch(e) { console.log('Push no disponible:', e.message); }
+}
+
+async function enviarNotificacion(tarea) {
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const hora = tarea.horario === 'inmediato' ? '⚡ Inmediatamente' : tarea.horario ? 'a las ' + tarea.horario : '';
+    new Notification('📋 Nueva tarea — Metales', {
+      body: `${tarea.creadoPor} cargó: ${tarea.cliente} ${hora}`,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      vibrate: [200, 100, 200]
+    });
+  } catch(e) { console.log('Error notificación:', e); }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for(let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
 
 window.guardarTarea = async function() {
   const cliente = document.getElementById('tareaCliente').value.trim();
   const fecha = document.getElementById('tareaFecha').value;
   if(!cliente) { alert('Ingresá el nombre del cliente.'); return; }
   if(!fecha) { alert('Seleccioná una fecha.'); return; }
+  const tipo = document.getElementById('tareaHorarioTipo').value;
+  const horario = tipo === 'inmediato' ? 'inmediato' : document.getElementById('tareaHorario').value;
   const btn = document.getElementById('btnGuardarTarea');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Guardando...';
   try {
     await addDoc(collection(db,'tareas'), {
       cliente,
-      horario: document.getElementById('tareaHorario').value,
+      horario,
       vehiculo: document.getElementById('tareaVehiculo').value,
       sobre: document.getElementById('tareaSobre').value,
       monto: document.getElementById('tareaMonto').value||'',
@@ -597,8 +723,9 @@ window.guardarTarea = async function() {
     ['tareaCliente','tareaHorario','tareaMonto'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('tareaVehiculo').value='';
     document.getElementById('tareaSobre').value='no';
+    document.getElementById('tareaHorarioTipo').value='hora';
+    document.getElementById('tareaHorario').style.display='block';
     document.getElementById('montoGroup').style.display='none';
-    // jump to that date
     selectedDate = fecha;
     updateDateHero();
     buildDateSelector();
