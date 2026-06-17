@@ -254,7 +254,7 @@ body{background:var(--metal-surface);color:var(--metal-text);min-height:100vh;ov
     <!-- CAMIONES -->
     <div id="tab-camiones" style="display:none">
       <div id="camionesList"><div class="empty-state">Cargando...</div></div>
-      <button class="add-emp-btn" onclick="openNuevoCamion()">+ Agregar camión</button>
+      <button class="add-emp-btn" onclick="openModal('camionModal')">+ Agregar camión</button>
     </div>
   </div>
 </div>
@@ -320,17 +320,13 @@ body{background:var(--metal-surface);color:var(--metal-text);min-height:100vh;ov
 <!-- MODAL CAMION -->
 <div class="modal-bg" id="camionModal">
 <div class="modal">
-  <div class="modal-title" id="camionModalTitle">Nuevo Camión <button class="modal-close" onclick="closeModal('camionModal')">×</button></div>
+  <div class="modal-title">Nuevo Camión <button class="modal-close" onclick="closeModal('camionModal')">×</button></div>
   <div class="form-group"><label class="form-label">Patente</label><input class="form-input" id="camPatente" placeholder="AB123CD" style="text-transform:uppercase"></div>
-  <div class="form-group"><label class="form-label">Modelo / Descripción</label><input class="form-input" id="camModelo" placeholder="Ford F-350 2020"></div>
+  <div class="form-group"><label class="form-label">Modelo</label><input class="form-input" id="camModelo" placeholder="Ford F-350 2020"></div>
   <div class="form-group"><label class="form-label">Vencimiento VTV</label><input class="form-input" id="camVTV" type="date"></div>
   <div class="form-group"><label class="form-label">Vencimiento Patente</label><input class="form-input" id="camPatVenc" type="date"></div>
-  <div class="form-group"><label class="form-label">Vencimiento Seguro</label><input class="form-input" id="camSeguro" type="date"></div>
-  <div class="form-group"><label class="form-label">Km actuales</label><input class="form-input" id="camKm" type="number" placeholder="0"></div>
-  <div class="form-group"><label class="form-label">Próximo cambio aceite (km)</label><input class="form-input" id="camAceite" type="number" placeholder="0"></div>
-  <div class="form-group"><label class="form-label">Notas adicionales</label><textarea class="form-input" id="camNotas" rows="2" placeholder="Cualquier detalle extra..."></textarea></div>
   <div class="form-group">
-    <label class="form-label">Estado</label>
+    <label class="form-label">Estado inicial</label>
     <select class="form-select" id="camEstado" onchange="toggleObsInicial()">
       <option value="ok">En condiciones</option>
       <option value="obs">Con observaciones</option>
@@ -341,7 +337,6 @@ body{background:var(--metal-surface);color:var(--metal-text);min-height:100vh;ov
     <textarea class="form-input" id="camObsInicial" rows="2" placeholder="Describí el problema..."></textarea>
   </div>
   <button class="form-btn" id="btnGuardarCamion" onclick="guardarCamion()">Guardar camión</button>
-  <button class="form-btn" id="btnEliminarCamion" onclick="eliminarCamion()" style="display:none;background:#dc2626;margin-top:8px">🗑 Eliminar vehículo</button>
 </div>
 </div>
 
@@ -358,7 +353,7 @@ body{background:var(--metal-surface);color:var(--metal-text);min-height:100vh;ov
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
+  getFirestore, collection, addDoc, getDocs, doc, updateDoc, onSnapshot, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -626,29 +621,19 @@ function renderCamiones() {
   const list = document.getElementById('camionesList');
   if(!camiones.length) { list.innerHTML = '<div class="empty-state">Sin camiones cargados.</div>'; return; }
   list.innerHTML = camiones.map(c => {
-    const alerta = isAlertDate(c.vtv) || isAlertDate(c.patVenc) || isAlertDate(c.seguro);
+    const alerta = isAlertDate(c.vtv) || isAlertDate(c.patVenc);
     const vtvCls = isAlertDate(c.vtv) ? 'truck-meta-item vence' : 'truck-meta-item';
     const patCls = isAlertDate(c.patVenc) ? 'truck-meta-item vence' : 'truck-meta-item';
-    const segCls = isAlertDate(c.seguro) ? 'truck-meta-item vence' : 'truck-meta-item';
     const obs = (c.observaciones||[]).map(o => `<div class="obs-entry"><span class="obs-entry-date">${o.fecha}</span><strong>${o.usuario}:</strong> ${o.texto}</div>`).join('');
     return `<div class="truck-card ${alerta?'alerta':''}">
       ${alerta?`<div style="font-size:11px;color:var(--metal-danger);font-weight:600;margin-bottom:6px">⚠ Vencimiento próximo</div>`:''}
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-          <div class="truck-plate">${c.patente}</div>
-          <div class="truck-model">${c.modelo}</div>
-        </div>
-        <button onclick="openEditCamion('${c.id}')" style="background:none;border:1.5px solid var(--metal-border);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--metal-text2)">✏ Editar</button>
-      </div>
+      <div class="truck-plate">${c.patente}</div>
+      <div class="truck-model">${c.modelo}</div>
       <div class="truck-meta">
         <div class="${vtvCls}"><strong>VTV:</strong> ${formatDate(c.vtv)}</div>
         <div class="${patCls}"><strong>Pat:</strong> ${formatDate(c.patVenc)}</div>
-        ${c.seguro?`<div class="${segCls}"><strong>Seguro:</strong> ${formatDate(c.seguro)}</div>`:''}
-        ${c.km?`<div class="truck-meta-item"><strong>Km:</strong> ${Number(c.km).toLocaleString('es-AR')}</div>`:''}
-        ${c.aceite?`<div class="truck-meta-item"><strong>Aceite:</strong> ${Number(c.aceite).toLocaleString('es-AR')} km</div>`:''}
         <div class="truck-meta-item"><strong>Estado:</strong> ${c.estado==='ok'?'En condiciones':'Con observaciones'}</div>
       </div>
-      ${c.notas?`<div style="font-size:12px;color:var(--metal-text2);margin-top:6px;padding:6px;background:#f8f8f8;border-radius:6px">📝 ${c.notas}</div>`:''}
       ${(c.observaciones||[]).length?`<div class="obs-log">${obs}</div>`:''}
       <button class="add-obs-btn" onclick="openObsModal('${c.id}')">+ Agregar observación</button>
     </div>`;
@@ -659,92 +644,35 @@ window.toggleObsInicial = function() {
   document.getElementById('obsInicialGroup').style.display = document.getElementById('camEstado').value === 'obs' ? 'block' : 'none';
 };
 
-window.openEditCamion = function(id) {
-  const c = camiones.find(x => x.id === id);
-  if(!c) return;
-  currentTruckId = id;
-  document.getElementById('camionModalTitle').innerHTML = `Editar Vehículo <button class="modal-close" onclick="closeModal('camionModal')">×</button>`;
-  document.getElementById('camPatente').value = c.patente || '';
-  document.getElementById('camModelo').value = c.modelo || '';
-  document.getElementById('camVTV').value = c.vtv || '';
-  document.getElementById('camPatVenc').value = c.patVenc || '';
-  document.getElementById('camSeguro').value = c.seguro || '';
-  document.getElementById('camKm').value = c.km || '';
-  document.getElementById('camAceite').value = c.aceite || '';
-  document.getElementById('camNotas').value = c.notas || '';
-  document.getElementById('camEstado').value = c.estado || 'ok';
-  document.getElementById('obsInicialGroup').style.display = 'none';
-  document.getElementById('camObsInicial').value = '';
-  document.getElementById('btnGuardarCamion').textContent = 'Guardar cambios';
-  document.getElementById('btnEliminarCamion').style.display = 'block';
-  openModal('camionModal');
-};
-
-// Reset modal to "nuevo" mode when opened via the + button
-const _origOpenModal = window.openModal;
-document.getElementById('camionModal').addEventListener('click', function(){});
-document.querySelector('[onclick="openModal(\'camionModal\')"]') && (function(){})();
-
-window.openNuevoCamion = function() {
-  currentTruckId = null;
-  document.getElementById('camionModalTitle').innerHTML = `Nuevo Camión <button class="modal-close" onclick="closeModal('camionModal')">×</button>`;
-  ['camPatente','camModelo','camVTV','camPatVenc','camSeguro','camKm','camAceite','camNotas','camObsInicial'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('camEstado').value = 'ok';
-  document.getElementById('obsInicialGroup').style.display = 'none';
-  document.getElementById('btnGuardarCamion').textContent = 'Guardar camión';
-  document.getElementById('btnEliminarCamion').style.display = 'none';
-  openModal('camionModal');
-};
-
 window.guardarCamion = async function() {
   const patente = document.getElementById('camPatente').value.trim().toUpperCase();
   const modelo = document.getElementById('camModelo').value.trim();
   if(!patente||!modelo) { alert('Ingresá patente y modelo.'); return; }
   const btn = document.getElementById('btnGuardarCamion');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Guardando...';
-  const data = {
-    patente, modelo,
-    vtv: document.getElementById('camVTV').value,
-    patVenc: document.getElementById('camPatVenc').value,
-    seguro: document.getElementById('camSeguro').value,
-    km: document.getElementById('camKm').value,
-    aceite: document.getElementById('camAceite').value,
-    notas: document.getElementById('camNotas').value.trim(),
-    estado: document.getElementById('camEstado').value,
-  };
-  try {
-    if(currentTruckId) {
-      // EDITAR
-      await updateDoc(doc(db, 'camiones', currentTruckId), data);
-    } else {
-      // NUEVO
-      const obs = [];
-      if(data.estado === 'obs') {
-        const t = document.getElementById('camObsInicial').value.trim();
-        if(t) {
-          const now = new Date();
-          obs.push({fecha:`${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`,texto:t,usuario:currentUser.nombre});
-        }
-      }
-      data.observaciones = obs;
-      data.createdAt = serverTimestamp();
-      await addDoc(collection(db, 'camiones'), data);
+  const obs = [];
+  if(document.getElementById('camEstado').value === 'obs') {
+    const t = document.getElementById('camObsInicial').value.trim();
+    if(t) {
+      const now = new Date();
+      obs.push({fecha:`${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`,texto:t,usuario:currentUser.nombre});
     }
-    closeModal('camionModal');
-    currentTruckId = null;
-  } catch(e) { alert('Error al guardar: ' + e.message); }
-  btn.disabled = false; btn.textContent = currentTruckId ? 'Guardar cambios' : 'Guardar camión';
-};
-
-window.eliminarCamion = async function() {
-  if(!currentTruckId) return;
-  const c = camiones.find(x => x.id === currentTruckId);
-  if(!confirm(`¿Eliminar el vehículo ${c?.patente}? Esta acción no se puede deshacer.`)) return;
+  }
   try {
-    await deleteDoc(doc(db, 'camiones', currentTruckId));
+    await addDoc(collection(db, 'camiones'), {
+      patente, modelo,
+      vtv: document.getElementById('camVTV').value,
+      patVenc: document.getElementById('camPatVenc').value,
+      estado: document.getElementById('camEstado').value,
+      observaciones: obs,
+      createdAt: serverTimestamp()
+    });
     closeModal('camionModal');
-    currentTruckId = null;
-  } catch(e) { alert('Error al eliminar: ' + e.message); }
+    ['camPatente','camModelo','camVTV','camPatVenc','camObsInicial'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('camEstado').value = 'ok';
+    document.getElementById('obsInicialGroup').style.display = 'none';
+  } catch(e) { alert('Error al guardar: ' + e.message); }
+  btn.disabled = false; btn.textContent = 'Guardar camión';
 };
 
 window.openObsModal = function(id) { currentTruckId = id; document.getElementById('newObsText').value = ''; openModal('obsModal'); };
