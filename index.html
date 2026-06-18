@@ -298,7 +298,7 @@ body{background:var(--metal-surface);color:var(--metal-text);min-height:100vh;ov
     </select>
   </div>
   <div class="form-group" id="montoGroup" style="display:none">
-    <label class="form-label">Monto del sobre ($)</label>
+    <label class="form-label">Monto del sobre</label>
     <input class="form-input" id="tareaMonto" type="number" placeholder="0.00">
   </div>
   <button class="form-btn" id="btnGuardarTarea" onclick="guardarTarea()">Guardar tarea</button>
@@ -413,7 +413,7 @@ window.handleDni = function(v) {
   const prevText = document.getElementById('userPreviewText');
   const btn = document.getElementById('loginBtn');
   document.getElementById('loginError').textContent = '';
-  if(v.length >= 8) {
+  if(v.length >= 4) {
     if(user) { prevText.textContent = user.nombre + ' — ' + user.rol; prevText.style.color = ''; btn.disabled = false; }
     else { prevText.textContent = 'DNI no registrado en el sistema'; prevText.style.color = '#f87171'; btn.disabled = true; }
   } else { prevText.textContent = 'Ingresá tu DNI para continuar'; prevText.style.color = 'rgba(255,255,255,0.35)'; btn.disabled = true; }
@@ -495,15 +495,23 @@ window.renderTareas = function() {
       <div class="task-dot ${t.done?'done':''}"></div>
       <div class="task-body">
         <div class="task-client">${t.cliente}</div>
-        <div class="task-details">${t.horario?t.horario+' · ':''}${t.vehiculo?t.vehiculo+' · ':''}${t.sobre==='si'?'Con sobre ($'+Number(t.monto||0).toLocaleString('es-AR')+')':'Sin sobre'}</div>
+        <div class="task-details">${t.horario?t.horario+' · ':''}${t.vehiculo?t.vehiculo+' · ':''}${t.sobre==='si'?`<span style="color:var(--metal-danger);font-weight:600">${Number(t.monto||0).toLocaleString('es-AR')}</span>`:'sin nada'}</div>
         <div class="task-meta">Por ${t.creadoPor}</div>
       </div>
+      <button onclick="eliminarTarea('${t.id}','${t.cliente}')" style="background:none;border:none;color:var(--metal-danger);font-size:20px;cursor:pointer;padding:4px 8px;flex-shrink:0;line-height:1;align-self:center" title="Eliminar tarea">×</button>
       <div class="task-check ${t.done?'done':''}" onclick="toggleTarea('${t.id}',${!t.done})"></div>
     </div>`).join('');
 };
 
 window.toggleTarea = async function(id, done) {
   await updateDoc(doc(db, 'tareas', id), {done});
+};
+
+window.eliminarTarea = async function(id, cliente) {
+  if(!confirm(`¿Eliminar la tarea de "${cliente}"? Esta acción no se puede deshacer.`)) return;
+  try {
+    await deleteDoc(doc(db, 'tareas', id));
+  } catch(e) { alert('Error al eliminar: ' + e.message); }
 };
 
 // ── GUARDAR TAREA ─────────────────────────────────────────
@@ -769,9 +777,7 @@ window.guardarObs = async function() {
 
 function populateTruckSelect() {
   const sel = document.getElementById('tareaVehiculo'); if(!sel) return;
-  const cur = sel.value; sel.innerHTML = '<option value="">— Sin vehículo —</option>';
-  camiones.forEach(c => { const o = document.createElement('option'); o.value = c.patente; o.textContent = c.patente + ' — ' + c.modelo; sel.appendChild(o); });
-  sel.value = cur;
+  sel.innerHTML = '<option value="">— Sin vehículo —</option><option value="Camión Grande">Camión Grande</option><option value="Camión Chico">Camión Chico</option><option value="F100">F100</option>';
 }
 
 // ── EMPLEADOS ─────────────────────────────────────────────
