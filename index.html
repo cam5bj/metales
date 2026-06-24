@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Metales</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif}
@@ -121,9 +121,9 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
 .modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text2);line-height:1}
 .form-group{margin-bottom:14px}
 .form-label{font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px;letter-spacing:.3px}
-.form-input{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:14px;color:var(--text);outline:none;background:#fff;transition:border .2s}
+.form-input{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:16px;color:var(--text);outline:none;background:#fff;transition:border .2s}
 .form-input:focus{border-color:var(--gold)}
-.form-select{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:14px;color:var(--text);outline:none;background:#fff;transition:border .2s;appearance:none}
+.form-select{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:16px;color:var(--text);outline:none;background:#fff;transition:border .2s;appearance:none}
 .form-select:focus{border-color:var(--gold)}
 .form-btn{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold-l));border:none;font-size:15px;font-weight:600;color:var(--dark);cursor:pointer;margin-top:6px}
 .form-btn:hover{opacity:.9}
@@ -164,7 +164,6 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
     </div>
     <div style="display:flex;align-items:center;gap:6px">
       <div class="header-user"><strong id="headerName">-</strong><span id="headerRole">-</span></div>
-      <button class="logout-btn" id="notifBtn" onclick="pedirPermisoNotif()" title="Activar notificaciones" style="display:none">🔔</button>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
     </div>
   </div>
@@ -314,6 +313,7 @@ let vehiculos = [];
 let unsubTareas = null;
 let idsConocidos = null;
 
+// ── UTILS ───────────────────────────────────────────────────
 function fechaStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
@@ -321,12 +321,17 @@ function strAFecha(s) {
   const [y,m,d] = s.split('-');
   return new Date(+y, +m-1, +d);
 }
+function hoy() { return fechaStr(new Date()); }
 
+// ── INIT ────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   const dniGuardado = localStorage.getItem('metales_dni');
   if(dniGuardado) {
     const user = USERS.find(u => u.dni === dniGuardado);
-    if(user) { setTimeout(() => iniciarSesion(user), 800); return; }
+    if(user) {
+      setTimeout(() => iniciarSesion(user), 800);
+      return;
+    }
   }
   setTimeout(() => {
     document.getElementById('loadingScreen').style.display = 'none';
@@ -335,6 +340,7 @@ window.addEventListener('load', () => {
   document.getElementById('dniInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 });
 
+// ── LOGIN ───────────────────────────────────────────────────
 window.handleDni = function(v) {
   const user = USERS.find(u => u.dni === v.trim());
   const txt = document.getElementById('userPreviewText');
@@ -366,7 +372,9 @@ function iniciarSesion(user) {
   actualizarDateNav();
   suscribirTareas();
   cargarVehiculos();
-  actualizarBotoNotif();
+  if('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 }
 
 window.doLogout = function() {
@@ -384,6 +392,7 @@ window.doLogout = function() {
   document.getElementById('loginBtn').disabled = true;
 };
 
+// ── DATE NAV ────────────────────────────────────────────────
 function actualizarDateNav() {
   const hoyD = new Date(); hoyD.setHours(0,0,0,0);
   const cur = new Date(fechaActual); cur.setHours(0,0,0,0);
@@ -403,13 +412,16 @@ window.cambiarFecha = function(delta) {
   renderTareas();
 };
 
+// ── TAREAS ──────────────────────────────────────────────────
 function suscribirTareas() {
   const q = query(collection(db, 'tareas'), orderBy('fecha'), orderBy('horario'));
   unsubTareas = onSnapshot(q, snap => {
     const nuevas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     if(idsConocidos !== null) {
       nuevas.forEach(t => {
-        if(!idsConocidos.has(t.id) && t.creadoPor !== currentUser.nombre) notificar(t);
+        if(!idsConocidos.has(t.id) && t.creadoPor !== currentUser.nombre) {
+          notificar(t);
+        }
       });
     }
     idsConocidos = new Set(nuevas.map(t => t.id));
@@ -429,12 +441,15 @@ function renderTareas() {
   const delDia = tareas.filter(t => t.fecha === fecha);
   const pendientes = delDia.filter(t => estadoReal(t) !== 'realizado');
   const realizadas = delDia.filter(t => estadoReal(t) === 'realizado');
+
   document.getElementById('stab-pend').textContent =
     pendientes.length > 0 ? `Pendientes (${pendientes.length})` : 'Pendientes';
   document.getElementById('stab-real').textContent =
     realizadas.length > 0 ? `Realizadas (${realizadas.length})` : 'Realizadas';
+
   const lista = subTabActivo === 'pendientes' ? pendientes : realizadas;
   const el = document.getElementById('listaTareas');
+
   if(!lista.length) {
     el.innerHTML = `<div class="empty-state">${subTabActivo === 'pendientes' ? 'Sin tareas pendientes para este día' : 'Sin tareas realizadas para este día'}</div>`;
     return;
@@ -449,15 +464,26 @@ function tarjetaTarea(t) {
   const sobreHtml = t.sobre === 'si'
     ? `<span style="color:var(--danger);font-weight:600">${Number(t.monto||0).toLocaleString('es-AR')}</span>`
     : 'sin nada';
+
   let meta = `Cargado por <b>${t.creadoPor || '-'}</b>`;
   if(t.vistoPor) meta += ` · Visto por <b>${t.vistoPor}</b>`;
   if(t.realizadoPor) meta += ` · Realizado por <b>${t.realizadoPor}</b>`;
+
   const idSafe = t.id;
   const clienteSafe = (t.cliente||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+
   let acciones = '';
-  if(estado === 'pendiente') acciones += `<button class="t-btn visto-btn" onclick="marcarVisto('${idSafe}')">Marcar visto</button>`;
-  if(estado === 'visto') acciones += `<button class="t-btn real-btn" onclick="marcarRealizado('${idSafe}')">Marcar realizado</button>`;
+  if(estado === 'pendiente') {
+    acciones += `<button class="t-btn visto-btn" onclick="marcarVisto('${idSafe}')">Marcar visto</button>`;
+  }
+  if(estado === 'visto') {
+    acciones += `<button class="t-btn real-btn" onclick="marcarRealizado('${idSafe}')">Marcar realizado</button>`;
+  }
+  if(estado === 'realizado') {
+    acciones += `<button class="t-btn visto-btn" onclick="volverAVisto('${idSafe}')">Volver a visto</button>`;
+  }
   acciones += `<button class="t-btn del-btn" onclick="eliminarTarea('${idSafe}','${clienteSafe}')">Eliminar</button>`;
+
   return `<div class="task-item ${cls}">
     <div class="task-main">
       <div class="task-dot"></div>
@@ -483,12 +509,17 @@ window.marcarRealizado = async function(id) {
   await updateDoc(doc(db, 'tareas', id), { estado: 'realizado', realizadoPor: currentUser.nombre });
 };
 
+window.volverAVisto = async function(id) {
+  await updateDoc(doc(db, 'tareas', id), { estado: 'visto', realizadoPor: null });
+};
+
 window.eliminarTarea = async function(id, cliente) {
   if(!confirm(`¿Eliminar la tarea de "${cliente}"?`)) return;
   try { await deleteDoc(doc(db, 'tareas', id)); }
   catch(e) { alert('Error: ' + e.message); }
 };
 
+// ── MODAL TAREA ─────────────────────────────────────────────
 window.abrirModalTarea = function() {
   document.getElementById('tCliente').value = '';
   document.getElementById('tFecha').value = fechaStr(fechaActual);
@@ -543,6 +574,7 @@ window.guardarTarea = async function() {
   btn.disabled = false; btn.textContent = 'Guardar tarea';
 };
 
+// ── VEHÍCULOS ───────────────────────────────────────────────
 function cargarVehiculos() {
   onSnapshot(collection(db, 'camiones'), snap => {
     vehiculos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -649,6 +681,7 @@ window.eliminarVehiculo = async function() {
   } catch(e) { alert('Error: ' + e.message); }
 };
 
+// ── TABS ────────────────────────────────────────────────────
 window.switchMain = function(tab) {
   document.getElementById('panel-tareas').style.display   = tab === 'tareas'    ? 'block' : 'none';
   document.getElementById('panel-vehiculos').style.display = tab === 'vehiculos' ? 'block' : 'none';
@@ -664,29 +697,13 @@ window.switchSubTab = function(tab) {
   renderTareas();
 };
 
+// ── MODALES ─────────────────────────────────────────────────
 window.cerrarModal = function(id) { document.getElementById(id).classList.remove('open'); };
 document.querySelectorAll('.modal-bg').forEach(bg => {
   bg.addEventListener('click', e => { if(e.target === bg) bg.classList.remove('open'); });
 });
 
-function actualizarBotoNotif() {
-  const btn = document.getElementById('notifBtn');
-  if(!('Notification' in window)) { btn.style.display = 'none'; return; }
-  if(Notification.permission === 'granted') { btn.style.display = 'none'; }
-  else { btn.style.display = 'inline-block'; }
-}
-
-window.pedirPermisoNotif = async function() {
-  if(!('Notification' in window)) { alert('Tu navegador no soporta notificaciones.'); return; }
-  const result = await Notification.requestPermission();
-  if(result === 'granted') {
-    actualizarBotoNotif();
-    new Notification('Notificaciones activadas', { body: 'Vas a recibir alertas cuando se cargue una tarea nueva.', tag: 'test' });
-  } else {
-    alert('Permiso denegado. Activalo manualmente en la configuración del navegador.');
-  }
-};
-
+// ── NOTIFICACIONES ──────────────────────────────────────────
 function notificar(t) {
   if(Notification.permission !== 'granted') return;
   const hora = (!t.horario || t.horario === '') ? 'Inmediatamente' : t.horario;
