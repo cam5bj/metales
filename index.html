@@ -22,6 +22,9 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
 .logo-circle{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-l));display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:700;color:var(--dark);margin-bottom:1.5rem}
 .loading-text{color:var(--silver);font-size:14px;letter-spacing:1px}
 
+/* PASSWORD */
+.pwd-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,var(--dark),var(--mid),var(--light));padding:2rem}
+
 /* LOGIN */
 .login-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,var(--dark),var(--mid),var(--light));padding:2rem}
 .login-logo{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-l));display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:700;color:var(--dark);margin-bottom:1.5rem;box-shadow:0 4px 24px rgba(201,168,76,.4)}
@@ -139,6 +142,18 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
 <div class="loading-screen" id="loadingScreen">
   <div class="logo-circle">M</div>
   <div class="loading-text">Cargando...</div>
+</div>
+
+<div class="pwd-screen" id="pwdScreen">
+  <div class="login-logo">M</div>
+  <div class="login-title">METALES</div>
+  <div class="login-sub">ACCESO A LA APLICACIÓN</div>
+  <div class="login-card">
+    <label>Contraseña</label>
+    <input type="password" id="pwdInput" placeholder="Ingresá la contraseña" oninput="document.getElementById('pwdError').textContent=''">
+    <button class="login-btn" id="pwdBtn" onclick="verificarPassword()">Continuar</button>
+    <div class="login-error" id="pwdError"></div>
+  </div>
 </div>
 
 <div class="login-screen" id="loginScreen">
@@ -278,7 +293,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBDGMOeiOio5oVpa6FdLuTI6JxkcwRJTEE",
+  apiKey: "AIzaSyBD•••••••••••••••••••••••••••••••",
   authDomain: "metales-empresa.firebaseapp.com",
   projectId: "metales-empresa",
   storageBucket: "metales-empresa.firebasestorage.app",
@@ -288,6 +303,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+const APP_PASSWORD = 'Dani12';
 
 const USERS = [
   {dni:'40715376',nombre:'Camila Barraza',rol:'Jefe'},
@@ -300,6 +317,12 @@ const USERS = [
   {dni:'38536954',nombre:'Lucas Gimenez',rol:'Encargado'},
   {dni:'6421',nombre:'Metalback',rol:'Jefe'},
 ];
+
+// DNIs que pueden ver si una tarea lleva sobre, pero NO el monto del sobre
+const SOBRE_RESTRINGIDO = ['38634595','38843842','38536954'];
+function puedeVerMonto() {
+  return !!currentUser && !SOBRE_RESTRINGIDO.includes(currentUser.dni);
+}
 
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const DIAS  = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -325,6 +348,19 @@ function hoy() { return fechaStr(new Date()); }
 
 // ── INIT ────────────────────────────────────────────────────
 window.addEventListener('load', () => {
+  document.getElementById('dniInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('pwdInput').addEventListener('keydown', e => { if(e.key==='Enter') verificarPassword(); });
+
+  const pwdOk = localStorage.getItem('metales_pwd_ok');
+  if(!pwdOk) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('pwdScreen').style.display = 'flex';
+    return;
+  }
+  continuarInicioSesion();
+});
+
+function continuarInicioSesion() {
   const dniGuardado = localStorage.getItem('metales_dni');
   if(dniGuardado) {
     const user = USERS.find(u => u.dni === dniGuardado);
@@ -337,8 +373,20 @@ window.addEventListener('load', () => {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
   }, 800);
-  document.getElementById('dniInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
-});
+}
+
+// ── CONTRASEÑA DE LA APP (solo primera vez por dispositivo) ──
+window.verificarPassword = function() {
+  const v = document.getElementById('pwdInput').value;
+  if(v === APP_PASSWORD) {
+    localStorage.setItem('metales_pwd_ok', '1');
+    document.getElementById('pwdScreen').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'flex';
+    continuarInicioSesion();
+  } else {
+    document.getElementById('pwdError').textContent = 'Contraseña incorrecta.';
+  }
+};
 
 // ── LOGIN ───────────────────────────────────────────────────
 window.handleDni = function(v) {
@@ -461,9 +509,12 @@ function tarjetaTarea(t) {
   const estado = estadoReal(t);
   const cls = estado === 'visto' ? 'visto' : estado === 'realizado' ? 'realizado' : '';
   const horText = (!t.horario || t.horario === '') ? 'Inmediatamente' : t.horario;
-  const sobreHtml = t.sobre === 'si'
-    ? `<span style="color:var(--danger);font-weight:600">${Number(t.monto||0).toLocaleString('es-AR')}</span>`
-    : 'sin nada';
+  let sobreHtml = 'sin nada';
+  if(t.sobre === 'si') {
+    sobreHtml = puedeVerMonto()
+      ? `<span style="color:var(--danger);font-weight:600">${Number(t.monto||0).toLocaleString('es-AR')}</span>`
+      : `<span style="color:var(--danger);font-weight:600">Con sobre</span>`;
+  }
 
   let meta = `Cargado por <b>${t.creadoPor || '-'}</b>`;
   if(t.vistoPor) meta += ` · Visto por <b>${t.vistoPor}</b>`;
