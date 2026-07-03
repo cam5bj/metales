@@ -370,6 +370,12 @@ function escapeHtml(s) {
 function escapeAttr(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+function tsToMillis(ts) {
+  if(!ts) return 0;
+  if(typeof ts.toMillis === 'function') return ts.toMillis();
+  if(typeof ts.seconds === 'number') return ts.seconds * 1000;
+  return 0;
+}
 
 // ── INIT ────────────────────────────────────────────────────
 window.addEventListener('load', () => {
@@ -522,6 +528,9 @@ function renderTareas() {
   const pendientes = delDia.filter(t => estadoReal(t) !== 'realizado');
   const realizadas = delDia.filter(t => estadoReal(t) === 'realizado');
 
+  // Ordenar Realizadas por el momento en que se marcaron: la más reciente arriba
+  realizadas.sort((a, b) => tsToMillis(b.realizadoAt) - tsToMillis(a.realizadoAt));
+
   document.getElementById('stab-pend').textContent =
     pendientes.length > 0 ? `Pendientes (${pendientes.length})` : 'Pendientes';
   document.getElementById('stab-real').textContent =
@@ -603,11 +612,15 @@ window.marcarVisto = async function(id) {
 };
 
 window.marcarRealizado = async function(id) {
-  await updateDoc(doc(db, 'tareas', id), { estado: 'realizado', realizadoPor: currentUser.nombre });
+  await updateDoc(doc(db, 'tareas', id), {
+    estado: 'realizado',
+    realizadoPor: currentUser.nombre,
+    realizadoAt: serverTimestamp()
+  });
 };
 
 window.volverAVisto = async function(id) {
-  await updateDoc(doc(db, 'tareas', id), { estado: 'visto', realizadoPor: null });
+  await updateDoc(doc(db, 'tareas', id), { estado: 'visto', realizadoPor: null, realizadoAt: null });
 };
 
 window.guardarChoferPatente = async function(id) {
@@ -721,6 +734,7 @@ window.guardarTarea = async function() {
       creadoPor: currentUser.nombre,
       vistoPor: null,
       realizadoPor: null,
+      realizadoAt: null,
       chofer: '',
       patente: '',
       createdAt: serverTimestamp()
