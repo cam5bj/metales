@@ -85,8 +85,9 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
 .task-item.realizado .task-dot{background:var(--success)}
 .task-item:not(.visto):not(.realizado) .task-dot{background:var(--gold)}
 .task-body{flex:1;min-width:0}
-.task-client{font-weight:600;font-size:14px;color:var(--dark)}
+.task-client{font-weight:600;font-size:14px;color:var(--dark);display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 .task-details{font-size:12px;color:var(--text2);margin-top:3px;display:flex;flex-wrap:wrap;gap:3px 8px}
+.task-clientes-detail{font-size:12px;color:var(--text2);margin-top:5px;display:flex;flex-direction:column;gap:2px}
 .task-meta{font-size:11px;color:var(--accent);margin-top:5px;line-height:1.6}
 .task-meta b{color:var(--text2)}
 .task-actions{display:flex;gap:6px;padding:7px 10px;border-top:1px solid rgba(0,0,0,.06);background:rgba(0,0,0,.015);flex-wrap:wrap;align-items:center}
@@ -96,6 +97,20 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
 .t-btn.real-btn{border-color:var(--real-border);color:var(--success);background:var(--real-bg)}
 .t-btn.del-btn{border-color:#fca5a5;color:var(--danger);margin-left:auto}
 .t-btn.del-btn:hover{background:#fef2f2}
+
+/* PLUS UNO */
+.plus-uno-badge{color:var(--success);font-weight:700;font-size:12px;background:rgba(42,122,75,.12);padding:2px 8px;border-radius:10px}
+.plus-uno-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 22px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-size:15px;font-weight:700;color:var(--text2);cursor:pointer;transition:all .15s}
+.plus-uno-btn.active{background:var(--success);border-color:var(--success);color:#fff}
+
+/* CLIENTES MULTIPLES EN FORMULARIO */
+.cliente-block{border:1.5px solid var(--border);border-radius:9px;padding:10px;margin-bottom:8px;background:var(--surface)}
+.cliente-del-btn{background:none;border:1.5px solid #fca5a5;color:var(--danger);border-radius:7px;width:34px;height:34px;font-size:16px;cursor:pointer;flex-shrink:0}
+.cliente-del-btn:hover{background:#fef2f2}
+
+/* CHOFER / PATENTE EN TAREA REALIZADA */
+.task-realizado-extra{padding:10px 13px;border-top:1px solid rgba(0,0,0,.06);background:rgba(0,0,0,.015);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.task-realizado-extra .form-input{flex:1;min-width:120px;padding:8px 10px;font-size:13px}
 
 .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--text2);font-size:14px}
 .add-btn{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--gold);background:none;border:1.5px dashed var(--gold);padding:9px 16px;border-radius:9px;cursor:pointer;width:100%;margin-top:8px}
@@ -228,10 +243,13 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
 <div class="modal-bg" id="modalTarea">
 <div class="modal">
   <div class="modal-title">Nueva Tarea <button class="modal-close" onclick="cerrarModal('modalTarea')">×</button></div>
+
   <div class="form-group">
-    <label class="form-label">Cliente</label>
-    <input class="form-input" id="tCliente" placeholder="Nombre del cliente">
+    <label class="form-label">Clientes</label>
+    <div id="tClientesContainer"></div>
+    <button type="button" class="add-btn" onclick="agregarClienteForm()">+ Agregar cliente</button>
   </div>
+
   <div class="form-group">
     <label class="form-label">Fecha</label>
     <input class="form-input" id="tFecha" type="date">
@@ -256,17 +274,12 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
       <option value="F100">F100</option>
     </select>
   </div>
+
   <div class="form-group">
-    <label class="form-label">Sobre</label>
-    <select class="form-select" id="tSobre" onchange="toggleMonto()">
-      <option value="no">Sin sobre</option>
-      <option value="si">Con sobre</option>
-    </select>
+    <label class="form-label">Extra</label>
+    <button type="button" class="plus-uno-btn" id="tPlusUnoBtn" onclick="togglePlusUno()">+1</button>
   </div>
-  <div class="form-group" id="tMontoGroup" style="display:none">
-    <label class="form-label">Monto</label>
-    <input class="form-input" id="tMonto" type="number" placeholder="0">
-  </div>
+
   <button class="form-btn" id="btnGuardarTarea" onclick="guardarTarea()">Guardar tarea</button>
 </div>
 </div>
@@ -337,6 +350,10 @@ let vehiculos = [];
 let unsubTareas = null;
 let idsConocidos = null;
 
+// Estado del formulario de nueva tarea (clientes múltiples + "+1")
+let clientesForm = [];
+let plusUnoActivo = false;
+
 // ── UTILS ───────────────────────────────────────────────────
 function fechaStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -346,6 +363,13 @@ function strAFecha(s) {
   return new Date(+y, +m-1, +d);
 }
 function hoy() { return fechaStr(new Date()); }
+
+function escapeHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escapeAttr(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 // ── INIT ────────────────────────────────────────────────────
 window.addEventListener('load', () => {
@@ -485,6 +509,13 @@ function estadoReal(t) {
   return 'pendiente';
 }
 
+// Compatibilidad: tareas viejas tienen cliente/sobre/monto sueltos,
+// las nuevas tienen un array "clientes"
+function getClientesArray(t) {
+  if(Array.isArray(t.clientes) && t.clientes.length) return t.clientes;
+  return [{ nombre: t.cliente || '', sobre: t.sobre || 'no', monto: t.monto || '0' }];
+}
+
 function renderTareas() {
   const fecha = fechaStr(fechaActual);
   const delDia = tareas.filter(t => t.fecha === fecha);
@@ -510,19 +541,25 @@ function tarjetaTarea(t) {
   const estado = estadoReal(t);
   const cls = estado === 'visto' ? 'visto' : estado === 'realizado' ? 'realizado' : '';
   const horText = (!t.horario || t.horario === '') ? 'Inmediatamente' : t.horario;
-  let sobreHtml = 'sin nada';
-  if(t.sobre === 'si') {
-    sobreHtml = puedeVerMonto()
-      ? `<span style="color:var(--danger);font-weight:600">${Number(t.monto||0).toLocaleString('es-AR')}</span>`
-      : `<span style="color:var(--danger);font-weight:600">Con sobre</span>`;
-  }
+  const clientesArr = getClientesArray(t);
+  const nombresTxt = clientesArr.map(c => c.nombre).filter(Boolean).join(', ') || '-';
+
+  const detalleClientes = clientesArr.map(c => {
+    let sobreTxt = 'sin sobre';
+    if(c.sobre === 'si') {
+      sobreTxt = puedeVerMonto()
+        ? `Con sobre: <b style="color:var(--danger)">$${Number(c.monto||0).toLocaleString('es-AR')}</b>`
+        : `<b style="color:var(--danger)">Con sobre</b>`;
+    }
+    return `<div>${escapeHtml(c.nombre || '-')} — ${sobreTxt}</div>`;
+  }).join('');
 
   let meta = `Cargado por <b>${t.creadoPor || '-'}</b>`;
   if(t.vistoPor) meta += ` · Visto por <b>${t.vistoPor}</b>`;
   if(t.realizadoPor) meta += ` · Realizado por <b>${t.realizadoPor}</b>`;
 
   const idSafe = t.id;
-  const clienteSafe = (t.cliente||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const nombresSafe = nombresTxt.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
   let acciones = '';
   if(estado === 'pendiente') {
@@ -534,21 +571,29 @@ function tarjetaTarea(t) {
   if(estado === 'realizado') {
     acciones += `<button class="t-btn visto-btn" onclick="volverAVisto('${idSafe}')">Volver a visto</button>`;
   }
-  acciones += `<button class="t-btn del-btn" onclick="eliminarTarea('${idSafe}','${clienteSafe}')">Eliminar</button>`;
+  acciones += `<button class="t-btn del-btn" onclick="eliminarTarea('${idSafe}','${nombresSafe}')">Eliminar</button>`;
+
+  const realizadoExtra = estado === 'realizado' ? `
+    <div class="task-realizado-extra">
+      <input class="form-input" placeholder="Chofer" id="chofer-${idSafe}" value="${escapeAttr(t.chofer||'')}">
+      <input class="form-input" placeholder="Patente" style="text-transform:uppercase" id="patente-${idSafe}" value="${escapeAttr(t.patente||'')}">
+      <button class="t-btn real-btn" onclick="guardarChoferPatente('${idSafe}')">Guardar</button>
+    </div>` : '';
 
   return `<div class="task-item ${cls}">
     <div class="task-main">
       <div class="task-dot"></div>
       <div class="task-body">
-        <div class="task-client">${t.cliente||''}</div>
+        <div class="task-client">${escapeHtml(nombresTxt)}${t.plusUno ? '<span class="plus-uno-badge">+1</span>' : ''}</div>
         <div class="task-details">
           <span>${horText}</span>
           ${t.vehiculo ? `<span>· ${t.vehiculo}</span>` : ''}
-          <span>· ${sobreHtml}</span>
         </div>
+        <div class="task-clientes-detail">${detalleClientes}</div>
         <div class="task-meta">${meta}</div>
       </div>
     </div>
+    ${realizadoExtra}
     <div class="task-actions">${acciones}</div>
   </div>`;
 }
@@ -565,6 +610,16 @@ window.volverAVisto = async function(id) {
   await updateDoc(doc(db, 'tareas', id), { estado: 'visto', realizadoPor: null });
 };
 
+window.guardarChoferPatente = async function(id) {
+  const choferInput = document.getElementById('chofer-'+id);
+  const patenteInput = document.getElementById('patente-'+id);
+  const chofer = choferInput ? choferInput.value.trim() : '';
+  const patente = patenteInput ? patenteInput.value.trim().toUpperCase() : '';
+  try {
+    await updateDoc(doc(db, 'tareas', id), { chofer, patente });
+  } catch(e) { alert('Error: ' + e.message); }
+};
+
 window.eliminarTarea = async function(id, cliente) {
   if(!confirm(`¿Eliminar la tarea de "${cliente}"?`)) return;
   try { await deleteDoc(doc(db, 'tareas', id)); }
@@ -573,15 +628,18 @@ window.eliminarTarea = async function(id, cliente) {
 
 // ── MODAL TAREA ─────────────────────────────────────────────
 window.abrirModalTarea = function() {
-  document.getElementById('tCliente').value = '';
   document.getElementById('tFecha').value = fechaStr(fechaActual);
   document.getElementById('tHorarioTipo').value = 'inmediato';
   document.getElementById('tHorarioInputGroup').style.display = 'none';
   document.getElementById('tHorario').value = '';
   document.getElementById('tVehiculo').value = '';
-  document.getElementById('tSobre').value = 'no';
-  document.getElementById('tMontoGroup').style.display = 'none';
-  document.getElementById('tMonto').value = '';
+
+  clientesForm = [nuevoClienteForm()];
+  renderClientesForm();
+
+  plusUnoActivo = false;
+  document.getElementById('tPlusUnoBtn').classList.remove('active');
+
   document.getElementById('btnGuardarTarea').textContent = 'Guardar tarea';
   document.getElementById('btnGuardarTarea').disabled = false;
   document.getElementById('modalTarea').classList.add('open');
@@ -592,30 +650,79 @@ window.toggleHorarioInput = function() {
     document.getElementById('tHorarioTipo').value === 'hora' ? 'block' : 'none';
 };
 
-window.toggleMonto = function() {
-  document.getElementById('tMontoGroup').style.display =
-    document.getElementById('tSobre').value === 'si' ? 'block' : 'none';
+window.togglePlusUno = function() {
+  plusUnoActivo = !plusUnoActivo;
+  document.getElementById('tPlusUnoBtn').classList.toggle('active', plusUnoActivo);
 };
 
+// ── CLIENTES MÚLTIPLES (formulario nueva tarea) ────────────
+function nuevoClienteForm() {
+  return { nombre: '', sobre: 'no', monto: '' };
+}
+
+window.agregarClienteForm = function() {
+  clientesForm.push(nuevoClienteForm());
+  renderClientesForm();
+};
+
+window.eliminarClienteForm = function(idx) {
+  clientesForm.splice(idx, 1);
+  if(!clientesForm.length) clientesForm.push(nuevoClienteForm());
+  renderClientesForm();
+};
+
+window.actualizarClienteForm = function(idx, campo, valor) {
+  clientesForm[idx][campo] = valor;
+  if(campo === 'sobre') renderClientesForm();
+};
+
+function renderClientesForm() {
+  const el = document.getElementById('tClientesContainer');
+  el.innerHTML = clientesForm.map((c, idx) => `
+    <div class="cliente-block">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <input class="form-input" style="flex:1" placeholder="Nombre del cliente" value="${escapeAttr(c.nombre)}" oninput="actualizarClienteForm(${idx},'nombre',this.value)">
+        ${clientesForm.length > 1 ? `<button type="button" class="cliente-del-btn" onclick="eliminarClienteForm(${idx})">×</button>` : ''}
+      </div>
+      <select class="form-select" onchange="actualizarClienteForm(${idx},'sobre',this.value)">
+        <option value="no" ${c.sobre==='no'?'selected':''}>Sin sobre</option>
+        <option value="si" ${c.sobre==='si'?'selected':''}>Con sobre</option>
+      </select>
+      ${c.sobre==='si' ? `<input class="form-input" type="number" placeholder="Monto del sobre" style="margin-top:6px" value="${escapeAttr(c.monto)}" oninput="actualizarClienteForm(${idx},'monto',this.value)">` : ''}
+    </div>
+  `).join('');
+}
+
 window.guardarTarea = async function() {
-  const cliente = document.getElementById('tCliente').value.trim();
   const fecha = document.getElementById('tFecha').value;
-  if(!cliente) { alert('Ingresá el nombre del cliente.'); return; }
   if(!fecha) { alert('Seleccioná una fecha.'); return; }
+
+  const clientesValidos = clientesForm
+    .map(c => ({
+      nombre: (c.nombre || '').trim(),
+      sobre: c.sobre === 'si' ? 'si' : 'no',
+      monto: c.sobre === 'si' ? (c.monto || '0') : '0'
+    }))
+    .filter(c => c.nombre);
+
+  if(!clientesValidos.length) { alert('Ingresá al menos un cliente.'); return; }
+
   const tipo = document.getElementById('tHorarioTipo').value;
   const horario = tipo === 'hora' ? (document.getElementById('tHorario').value || '') : '';
   const btn = document.getElementById('btnGuardarTarea');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Guardando...';
   try {
     await addDoc(collection(db, 'tareas'), {
-      cliente, horario, fecha,
+      clientes: clientesValidos,
+      horario, fecha,
       vehiculo: document.getElementById('tVehiculo').value,
-      sobre: document.getElementById('tSobre').value,
-      monto: document.getElementById('tMonto').value || '0',
+      plusUno: plusUnoActivo,
       estado: 'pendiente',
       creadoPor: currentUser.nombre,
       vistoPor: null,
       realizadoPor: null,
+      chofer: '',
+      patente: '',
       createdAt: serverTimestamp()
     });
     cerrarModal('modalTarea');
@@ -759,8 +866,9 @@ document.querySelectorAll('.modal-bg').forEach(bg => {
 function notificar(t) {
   if(Notification.permission !== 'granted') return;
   const hora = (!t.horario || t.horario === '') ? 'Inmediatamente' : t.horario;
+  const nombres = getClientesArray(t).map(c => c.nombre).filter(Boolean).join(', ');
   new Notification('Nueva tarea — Metales', {
-    body: `${t.cliente} · ${hora}${t.vehiculo ? ' · ' + t.vehiculo : ''}\nCargada por ${t.creadoPor}`,
+    body: `${nombres} · ${hora}${t.vehiculo ? ' · ' + t.vehiculo : ''}\nCargada por ${t.creadoPor}`,
     tag: 'tarea-' + t.id
   });
 }
