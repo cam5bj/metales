@@ -111,6 +111,7 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
 /* CHOFER / PATENTE EN TAREA REALIZADA */
 .task-realizado-extra{padding:10px 13px;border-top:1px solid rgba(0,0,0,.06);background:rgba(0,0,0,.015);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .task-realizado-extra .form-input{flex:1;min-width:120px;padding:8px 10px;font-size:13px}
+.task-realizado-extra textarea.form-input{flex:1 1 100%;resize:vertical}
 
 .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--text2);font-size:14px}
 .add-btn{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--gold);background:none;border:1.5px dashed var(--gold);padding:9px 16px;border-radius:9px;cursor:pointer;width:100%;margin-top:8px}
@@ -586,6 +587,7 @@ function tarjetaTarea(t) {
     <div class="task-realizado-extra">
       <input class="form-input" placeholder="Chofer" id="chofer-${idSafe}" value="${escapeAttr(t.chofer||'')}">
       <input class="form-input" placeholder="Patente" style="text-transform:uppercase" id="patente-${idSafe}" value="${escapeAttr(t.patente||'')}">
+      <textarea class="form-input" placeholder="Observaciones" id="obs-${idSafe}" rows="2">${escapeHtml(t.observaciones||'')}</textarea>
       <button class="t-btn real-btn" onclick="guardarChoferPatente('${idSafe}')">Guardar</button>
     </div>` : '';
 
@@ -626,10 +628,12 @@ window.volverAVisto = async function(id) {
 window.guardarChoferPatente = async function(id) {
   const choferInput = document.getElementById('chofer-'+id);
   const patenteInput = document.getElementById('patente-'+id);
+  const obsInput = document.getElementById('obs-'+id);
   const chofer = choferInput ? choferInput.value.trim() : '';
   const patente = patenteInput ? patenteInput.value.trim().toUpperCase() : '';
+  const observaciones = obsInput ? obsInput.value.trim() : '';
   try {
-    await updateDoc(doc(db, 'tareas', id), { chofer, patente });
+    await updateDoc(doc(db, 'tareas', id), { chofer, patente, observaciones });
   } catch(e) { alert('Error: ' + e.message); }
 };
 
@@ -737,6 +741,7 @@ window.guardarTarea = async function() {
       realizadoAt: null,
       chofer: '',
       patente: '',
+      observaciones: '',
       createdAt: serverTimestamp()
     });
     cerrarModal('modalTarea');
