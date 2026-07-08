@@ -95,6 +95,7 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
 .t-btn:hover{background:var(--surface)}
 .t-btn.visto-btn{border-color:var(--visto-border);color:#7a5c00;background:var(--visto-bg)}
 .t-btn.real-btn{border-color:var(--real-border);color:var(--success);background:var(--real-bg)}
+.t-btn.edit-btn{border-color:var(--accent);color:var(--dark);background:#fff}
 .t-btn.del-btn{border-color:#fca5a5;color:var(--danger);margin-left:auto}
 .t-btn.del-btn:hover{background:#fef2f2}
 
@@ -243,7 +244,7 @@ body{background:var(--surface);color:var(--text);min-height:100vh}
 <!-- MODAL TAREA -->
 <div class="modal-bg" id="modalTarea">
 <div class="modal">
-  <div class="modal-title">Nueva Tarea <button class="modal-close" onclick="cerrarModal('modalTarea')">×</button></div>
+  <div class="modal-title" id="tareaModalTitle">Nueva Tarea <button class="modal-close" onclick="cerrarModal('modalTarea')">×</button></div>
 
   <div class="form-group">
     <label class="form-label">Clientes</label>
@@ -351,9 +352,10 @@ let vehiculos = [];
 let unsubTareas = null;
 let idsConocidos = null;
 
-// Estado del formulario de nueva tarea (clientes múltiples + "+1")
+// Estado del formulario de nueva/editar tarea (clientes múltiples + "+1")
 let clientesForm = [];
 let plusUnoActivo = false;
+let tareaEditandoId = null;
 
 // ── UTILS ───────────────────────────────────────────────────
 function fechaStr(d) {
@@ -581,6 +583,9 @@ function tarjetaTarea(t) {
   if(estado === 'realizado') {
     acciones += `<button class="t-btn visto-btn" onclick="volverAVisto('${idSafe}')">Volver a visto</button>`;
   }
+  if(estado !== 'realizado') {
+    acciones += `<button class="t-btn edit-btn" onclick="abrirEditarTarea('${idSafe}')">Editar</button>`;
+  }
   acciones += `<button class="t-btn del-btn" onclick="eliminarTarea('${idSafe}','${nombresSafe}')">Eliminar</button>`;
 
   const realizadoExtra = estado === 'realizado' ? `
@@ -645,6 +650,9 @@ window.eliminarTarea = async function(id, cliente) {
 
 // ── MODAL TAREA ─────────────────────────────────────────────
 window.abrirModalTarea = function() {
+  tareaEditandoId = null;
+  document.getElementById('tareaModalTitle').innerHTML = `Nueva Tarea <button class="modal-close" onclick="cerrarModal('modalTarea')">×</button>`;
+
   document.getElementById('tFecha').value = fechaStr(fechaActual);
   document.getElementById('tHorarioTipo').value = 'inmediato';
   document.getElementById('tHorarioInputGroup').style.display = 'none';
@@ -662,6 +670,36 @@ window.abrirModalTarea = function() {
   document.getElementById('modalTarea').classList.add('open');
 };
 
+window.abrirEditarTarea = function(id) {
+  const t = tareas.find(x => x.id === id);
+  if(!t) return;
+
+  tareaEditandoId = id;
+  document.getElementById('tareaModalTitle').innerHTML = `Editar Tarea <button class="modal-close" onclick="cerrarModal('modalTarea')">×</button>`;
+
+  document.getElementById('tFecha').value = t.fecha || fechaStr(fechaActual);
+  const tieneHora = !!t.horario;
+  document.getElementById('tHorarioTipo').value = tieneHora ? 'hora' : 'inmediato';
+  document.getElementById('tHorarioInputGroup').style.display = tieneHora ? 'block' : 'none';
+  document.getElementById('tHorario').value = t.horario || '';
+  document.getElementById('tVehiculo').value = t.vehiculo || '';
+
+  clientesForm = getClientesArray(t).map(c => ({
+    nombre: c.nombre || '',
+    sobre: c.sobre === 'si' ? 'si' : 'no',
+    monto: c.monto || ''
+  }));
+  if(!clientesForm.length) clientesForm = [nuevoClienteForm()];
+  renderClientesForm();
+
+  plusUnoActivo = !!t.plusUno;
+  document.getElementById('tPlusUnoBtn').classList.toggle('active', plusUnoActivo);
+
+  document.getElementById('btnGuardarTarea').textContent = 'Guardar cambios';
+  document.getElementById('btnGuardarTarea').disabled = false;
+  document.getElementById('modalTarea').classList.add('open');
+};
+
 window.toggleHorarioInput = function() {
   document.getElementById('tHorarioInputGroup').style.display =
     document.getElementById('tHorarioTipo').value === 'hora' ? 'block' : 'none';
@@ -672,7 +710,7 @@ window.togglePlusUno = function() {
   document.getElementById('tPlusUnoBtn').classList.toggle('active', plusUnoActivo);
 };
 
-// ── CLIENTES MÚLTIPLES (formulario nueva tarea) ────────────
+// ── CLIENTES MÚLTIPLES (formulario nueva/editar tarea) ─────
 function nuevoClienteForm() {
   return { nombre: '', sobre: 'no', monto: '' };
 }
@@ -727,28 +765,39 @@ window.guardarTarea = async function() {
   const tipo = document.getElementById('tHorarioTipo').value;
   const horario = tipo === 'hora' ? (document.getElementById('tHorario').value || '') : '';
   const btn = document.getElementById('btnGuardarTarea');
+  const esEdicion = !!tareaEditandoId;
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Guardando...';
   try {
-    await addDoc(collection(db, 'tareas'), {
-      clientes: clientesValidos,
-      horario, fecha,
-      vehiculo: document.getElementById('tVehiculo').value,
-      plusUno: plusUnoActivo,
-      estado: 'pendiente',
-      creadoPor: currentUser.nombre,
-      vistoPor: null,
-      realizadoPor: null,
-      realizadoAt: null,
-      chofer: '',
-      patente: '',
-      observaciones: '',
-      createdAt: serverTimestamp()
-    });
+    if(esEdicion) {
+      await updateDoc(doc(db, 'tareas', tareaEditandoId), {
+        clientes: clientesValidos,
+        horario, fecha,
+        vehiculo: document.getElementById('tVehiculo').value,
+        plusUno: plusUnoActivo
+      });
+    } else {
+      await addDoc(collection(db, 'tareas'), {
+        clientes: clientesValidos,
+        horario, fecha,
+        vehiculo: document.getElementById('tVehiculo').value,
+        plusUno: plusUnoActivo,
+        estado: 'pendiente',
+        creadoPor: currentUser.nombre,
+        vistoPor: null,
+        realizadoPor: null,
+        realizadoAt: null,
+        chofer: '',
+        patente: '',
+        observaciones: '',
+        createdAt: serverTimestamp()
+      });
+    }
     cerrarModal('modalTarea');
     fechaActual = strAFecha(fecha);
     actualizarDateNav();
     switchSubTab('pendientes');
   } catch(e) { alert('Error: ' + e.message); }
+  tareaEditandoId = null;
   btn.disabled = false; btn.textContent = 'Guardar tarea';
 };
 
